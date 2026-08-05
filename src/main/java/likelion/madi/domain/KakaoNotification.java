@@ -2,8 +2,6 @@ package likelion.madi.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,10 +14,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import likelion.madi.enums.ConnectionStatus;
-
 import java.time.LocalDateTime;
 
+// 카카오 로그인 계정으로 메시지를 발송하므로 별도 연동 절차(전화번호 입력, 토큰 발급)가 없다.
+// 이 테이블은 "카카오톡 메시지 수신에 동의했는지"만 기록한다.
 @Entity
 @Table(name = "KAKAO_NOTIFICATION")
 @Getter
@@ -35,35 +33,21 @@ public class KakaoNotification {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "phone_number", length = 20)
-    private String phoneNumber;
-
     @Column(name = "consent")
     private Boolean consent;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20)
-    private ConnectionStatus status;
 
     @Column(name = "consented_at")
     private LocalDateTime consentedAt;
 
     @Builder
-    public KakaoNotification(User user, String phoneNumber, Boolean consent) {
+    public KakaoNotification(User user, Boolean consent) {
         this.user = user;
-        this.phoneNumber = phoneNumber;
-        this.consent = consent;
-        this.status = ConnectionStatus.CONNECTED;
-        this.consentedAt = LocalDateTime.now();
-    }
-
-    public void updateConsent(String phoneNumber, Boolean consent) {
-        this.phoneNumber = phoneNumber;
         this.consent = consent;
         this.consentedAt = LocalDateTime.now();
     }
 
-    public void disconnect() {
-        this.status = ConnectionStatus.DISCONNECTED;
+    public void updateConsent(Boolean consent) {
+        this.consent = consent;
+        this.consentedAt = LocalDateTime.now();
     }
 }

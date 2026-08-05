@@ -1,5 +1,6 @@
 package likelion.madi.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -34,9 +35,14 @@ public class CareRecordTag {
     @JoinColumn(name = "tag_id")
     private StatusTag statusTag;
 
-    public CareRecordTag(CareRecord careRecord, StatusTag statusTag) {
+    // 태그별 증상 강도: 0(없음)~3(심함). 회복 탭 증상 곡선과 상담 권고 규칙의 판단 근거로 사용
+    @Column(name = "intensity")
+    private Integer intensity;
+
+    public CareRecordTag(CareRecord careRecord, StatusTag statusTag, Integer intensity) {
         this.careRecord = careRecord;
         this.statusTag = statusTag;
+        this.intensity = intensity;
         this.id = new CareRecordTagId(careRecord.getRecordId(), statusTag.getTagId());
     }
 
