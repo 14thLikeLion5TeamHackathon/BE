@@ -59,3 +59,17 @@ public class OAuthAttributes {
                 .nameAttributeKey(userNameAttributeName)
                 .build();
     }
+
+    private static OAuthAttributes ofGoogle(SocialProvider provider, String userNameAttributeName,
+                                             Map<String, Object> attributes) {
+        return OAuthAttributes.builder()
+                .name((String) attributes.get("name"))
+                .email((String) attributes.get("email"))
+                .profileImage((String) attributes.get("picture"))
+                .attributes(attributes)
+                .socialProvider(provider)
+                .socialId((String) attributes.get(userNameAttributeName))
+                .nameAttributeKey(userNameAttributeName)
+                .build();
+    }
+}
