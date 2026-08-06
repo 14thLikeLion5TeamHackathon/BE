@@ -10,25 +10,31 @@ public class ApiResponse<T> {
 
     private final boolean success;
     private final int code;
+    private final String errorCode;
     private final String message;
     private final T data;
 
-    private ApiResponse(boolean success, int code, String message, T data) {
+    private ApiResponse(boolean success, int code, String errorCode, String message, T data) {
         this.success = success;
         this.code = code;
+        this.errorCode = errorCode;
         this.message = message;
         this.data = data;
     }
 
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, 200, "success", data);
+        return new ApiResponse<>(true, 200, null, "success", data);
     }
 
     public static <T> ApiResponse<T> success(int code, String message, T data) {
-        return new ApiResponse<>(true, code, message, data);
+        return new ApiResponse<>(true, code, null, message, data);
     }
 
     public static ApiResponse<Object> fail(int code, String message) {
-        return new ApiResponse<>(false, code, message, null);
+        return new ApiResponse<>(false, code, null, message, null);
+    }
+
+    public static ApiResponse<Object> fail(int code, String errorCode, String message) {
+        return new ApiResponse<>(false, code, errorCode, message, null);
     }
 }

@@ -19,6 +19,7 @@ public class TreatmentResponse {
         this.treatmentId = treatmentId;
         this.name = name;
         this.category = category;
+        this.description = description;
     }
 
     public static TreatmentResponse from(Treatment treatment) {
