@@ -2,6 +2,7 @@ package likelion.madi.common.exception;
 
 import org.springframework.http.HttpStatus;
 
+import likelion.madi.common.response.ErrorStatus;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class BaseException extends RuntimeException {
     @Getter(AccessLevel.NONE)
     HttpStatus statusCode;
+    String errorCode;
     String responseMessage;
 
     public BaseException(HttpStatus statusCode) {
@@ -22,6 +24,13 @@ public class BaseException extends RuntimeException {
         super();
         this.statusCode = statusCode;
         this.responseMessage = responseMessage;
+    }
+
+    public BaseException(ErrorStatus errorStatus) {
+        super();
+        this.statusCode = errorStatus.getHttpStatus();
+        this.errorCode = errorStatus.getErrorCode();
+        this.responseMessage = errorStatus.getMessage();
     }
 
     public int getStatusCode() {

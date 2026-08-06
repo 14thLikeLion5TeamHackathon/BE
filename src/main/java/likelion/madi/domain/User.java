@@ -28,13 +28,9 @@ public class User {
     @Column(name = "name", length = 50)
     private String name;
 
-    // 자체 계정 로그인 사용자만 값이 있고, 소셜 로그인 사용자는 null
-    @Column(name = "login_id", unique = true, length = 50)
-    private String loginId;
+    @Column(name = "refresh_token", length = 500)
+    private String refreshToken;
 
-    // BCrypt 등으로 해시된 값만 저장 (평문 저장 금지)
-    @Column(name = "password", length = 255)
-    private String password;
 
     @Column(name = "birth_date")
     private LocalDate birthDate;
@@ -58,10 +54,8 @@ public class User {
     private LocalDateTime createdAt;
 
     @Builder
-    public User(String name, String loginId, String password) {
+    public User(String name) {
         this.name = name;
-        this.loginId = loginId;
-        this.password = password;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -76,8 +70,8 @@ public class User {
         this.hasAacOfflineExperience = hasAacOfflineExperience;
     }
 
-    // 이미 해시된 비밀번호를 전달받아 저장 (해싱은 서비스 레이어의 PasswordEncoder 책임)
-    public void updatePassword(String encodedPassword) {
-        this.password = encodedPassword;
+
+    public void updateRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
     }
 }
