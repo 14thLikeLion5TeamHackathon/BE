@@ -134,4 +134,5 @@ public class GlobalExceptionAdvice {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
                 .body(ApiResponse.fail(ErrorStatus.UNSUPPORTED_MEDIA_TYPE.getStatusCode(), errorMsg));
     }
+
 }

@@ -29,15 +29,15 @@ public class AuthService {
         try {
             userId = jwtService.extractUserId(refreshToken);
         } catch (JwtException | IllegalArgumentException e) {
-            throw new UnauthorizedException(ErrorStatus.UNAUTHORIZED_INVALID_REFRESH_TOKEN.getMessage());
+            throw new UnauthorizedException(ErrorStatus.UNAUTHORIZED_INVALID_REFRESH_TOKEN);
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UnauthorizedException(ErrorStatus.UNAUTHORIZED_INVALID_REFRESH_TOKEN.getMessage()));
+                .orElseThrow(() -> new UnauthorizedException(ErrorStatus.UNAUTHORIZED_INVALID_REFRESH_TOKEN));
 
         // 저장된 리프레시 토큰과 일치하는지 대조 (탈취/로그아웃된 토큰 재사용 방지)
         if (user.getRefreshToken() == null || !user.getRefreshToken().equals(refreshToken)) {
-            throw new UnauthorizedException(ErrorStatus.UNAUTHORIZED_INVALID_REFRESH_TOKEN.getMessage());
+            throw new UnauthorizedException(ErrorStatus.UNAUTHORIZED_INVALID_REFRESH_TOKEN);
         }
 
         String newAccessToken = jwtService.createAccessToken(user);
