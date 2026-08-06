@@ -28,9 +28,13 @@ public class Treatment {
     @Column(name = "category", length = 30)
     private String category;
 
+    @Column(name = "description", length = 255)
+    private String description;
+
     @Builder
-    public Treatment(String name, String category) {
+    public Treatment(String name, String category, String description) {
         this.name = name;
         this.category = category;
+        this.description = description;
     }
 }

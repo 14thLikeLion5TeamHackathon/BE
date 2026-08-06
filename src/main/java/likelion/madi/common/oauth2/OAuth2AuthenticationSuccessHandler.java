@@ -46,6 +46,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String accessToken = jwtService.createAccessToken(user);
         String refreshToken = jwtService.createRefreshToken(user.getUserId());
 
+        user.updateRefreshToken(refreshToken);
+        userRepository.save(user);
+
         log.info("OAuth2 인증 성공, 토큰 발급 완료 - userId: {}", user.getUserId());
 
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
