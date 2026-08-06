@@ -27,7 +27,7 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
 
         // 구체적인 오류 정보를 로그에 기록
         log.error("Request URI: {}", request.getRequestURI());
-        log.error("Request Parameters: {}", request.getParameterMap());
+        log.error("Request Query String: {}", request.getQueryString());
 
         // 실패 시 로그인 페이지로 리다이렉트 (에러 파라미터와 함께)
         String errorMessage = exception.getMessage();

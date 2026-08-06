@@ -34,31 +34,29 @@ public class OAuthAttributes {
                                       Map<String, Object> attributes) {
         SocialProvider provider = SocialProvider.valueOf(registrationId.toUpperCase());
 
-        if (provider == SocialProvider.NAVER) {
-            return ofNaver(provider, userNameAttributeName, attributes);
-        } else if (provider == SocialProvider.KAKAO) {
+        if (provider == SocialProvider.KAKAO) {
             return ofKakao(provider, userNameAttributeName, attributes);
         }
         return ofGoogle(provider, userNameAttributeName, attributes);
     }
 
 
-
     @SuppressWarnings("unchecked")
-    private static OAuthAttributes ofNaver(SocialProvider provider, String userNameAttributeName,
+    private static OAuthAttributes ofKakao(SocialProvider provider, String userNameAttributeName,
                                             Map<String, Object> attributes) {
-        Map<String, Object> response = (Map<String, Object>) attributes.get("response");
+        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        Map<String, Object> profile = kakaoAccount == null
+                ? null
+                : (Map<String, Object>) kakaoAccount.get("profile");
 
         return OAuthAttributes.builder()
-                .name((String) response.get("name"))
-                .email((String) response.get("email"))
-                .profileImage((String) response.get("profile_image"))
+                .name(profile == null ? null : (String) profile.get("nickname"))
+                .email(kakaoAccount == null ? null : (String) kakaoAccount.get("email"))
+                .profileImage(profile == null ? null : (String) profile.get("profile_image_url"))
                 .attributes(attributes)
                 .socialProvider(provider)
-                .socialId((String) response.get("id"))
+                .socialId(String.valueOf(attributes.get(userNameAttributeName)))
                 .nameAttributeKey(userNameAttributeName)
                 .build();
     }
-
-
 }
