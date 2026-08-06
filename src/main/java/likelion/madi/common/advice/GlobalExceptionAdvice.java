@@ -32,7 +32,7 @@ public class GlobalExceptionAdvice {
         log.warn("커스텀 예외 발생 - {}: {}", ex.getClass().getSimpleName(), ex.getMessage());
 
         return ResponseEntity.status(ex.getStatusCode())
-                .body(ApiResponse.fail(ex.getStatusCode(), ex.getMessage()));
+                .body(ApiResponse.fail(ex.getStatusCode(), ex.getErrorCode(), ex.getResponseMessage()));
     }
 
     // 글로벌 예외 처리 (ex. 명시되어 있지 않은 모든 예외)
@@ -134,5 +134,4 @@ public class GlobalExceptionAdvice {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
                 .body(ApiResponse.fail(ErrorStatus.UNSUPPORTED_MEDIA_TYPE.getStatusCode(), errorMsg));
     }
-
 }
