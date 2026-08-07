@@ -14,6 +14,6 @@ import lombok.NoArgsConstructor;
 public class GoogleLoginRequest {
 
     @Schema(description = "구글 액세스 토큰", example = "ya29.a0AfH6SMB...")
-    @NotBlank(message = "구글 액세스 토큰은 필수 입력 값입니다.")
+    @NotBlank(message = "구글 인증 토큰이 누락되었습니다.")
     private String googleAccessToken;
 }

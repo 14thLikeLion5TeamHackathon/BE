@@ -18,13 +18,13 @@ import lombok.NoArgsConstructor;
 @Schema(description = "구글 로그인 응답 DTO")
 public class GoogleLoginResponse {
 
-    @Schema(description = "신규 회원 여부 (true: 추가 정보 입력 필요, false: 로그인 완료)", example = "false")
+    @Schema(description = "신규 회원 여부 (true: 방금 자동 가입됨, false: 기존 회원)", example = "false")
     private Boolean isNewUser;
 
-    @Schema(description = "유저 ID (기존 회원일 경우)", example = "1")
+    @Schema(description = "유저 ID", example = "1")
     private Long userId;
 
-    @Schema(description = "소셜 계정 ID (기존 회원일 경우)", example = "1")
+    @Schema(description = "소셜 계정 ID", example = "1")
     private Long socialAccountId;
 
     @Schema(description = "소셜 제공자", example = "google")
@@ -33,33 +33,9 @@ public class GoogleLoginResponse {
     @Schema(description = "구글 고유 유저 ID", example = "10928374921839210")
     private String providerUserId;
 
-    @Schema(description = "구글 이메일 (신규 회원일 경우)", example = "user@gmail.com")
-    private String googleEmail;
-
-    @Schema(description = "서비스 Access Token (기존 회원일 경우)", example = "eyJhbGciOiJIUzI1NiJ9...")
+    @Schema(description = "서비스 Access Token", example = "eyJhbGciOiJIUzI1NiJ9...")
     private String accessToken;
 
-    @Schema(description = "서비스 Refresh Token (기존 회원일 경우)", example = "eyJhbGciOiJIUzI1NiJ9...")
+    @Schema(description = "서비스 Refresh Token", example = "eyJhbGciOiJIUzI1NiJ9...")
     private String refreshToken;
-
-    public static GoogleLoginResponse ofExistingUser(Long userId, Long socialAccountId, String providerUserId, String accessToken, String refreshToken) {
-        return GoogleLoginResponse.builder()
-                .isNewUser(false)
-                .userId(userId)
-                .socialAccountId(socialAccountId)
-                .provider("google")
-                .providerUserId(providerUserId)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
-    }
-
-    public static GoogleLoginResponse ofNewUser(String providerUserId, String googleEmail) {
-        return GoogleLoginResponse.builder()
-                .isNewUser(true)
-                .provider("google")
-                .providerUserId(providerUserId)
-                .googleEmail(googleEmail)
-                .build();
-    }
 }

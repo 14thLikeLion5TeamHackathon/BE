@@ -59,4 +59,16 @@ public class OAuthAttributes {
                 .nameAttributeKey(userNameAttributeName)
                 .build();
     }
+    private static OAuthAttributes ofGoogle(SocialProvider provider, String userNameAttributeName,
+                                            Map<String, Object> attributes) {
+        return OAuthAttributes.builder()
+                .name((String) attributes.get("name"))
+                .email((String) attributes.get("email"))
+                .profileImage((String) attributes.get("picture")) // 구글 프로필 사진 키값은 "picture"입니다.
+                .attributes(attributes)
+                .socialProvider(provider)
+                .socialId(String.valueOf(attributes.get(userNameAttributeName)))
+                .nameAttributeKey(userNameAttributeName)
+                .build();
+    }
 }
