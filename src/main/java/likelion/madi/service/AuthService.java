@@ -1,5 +1,9 @@
 package likelion.madi.service;
 
+import likelion.madi.common.exception.ConflictException;
+import likelion.madi.common.exception.NotFoundException;
+import likelion.madi.dto.request.OnboardingRequest;
+import likelion.madi.dto.response.OnboardingResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,5 +55,27 @@ public class AuthService {
                 .refreshToken(newRefreshToken)
                 .expiresIn(ACCESS_TOKEN_VALIDITY_SECONDS)
                 .build();
+    }
+
+    @Transactional
+    public OnboardingResponse onboard(Long userId, OnboardingRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        if (user.getBirthDate() != null) {
+            throw new ConflictException(ErrorStatus.CONFLICT_ALREADY_ONBOARDED_USER);
+        }
+
+        user.completeOnboarding(
+                request.getName(),
+                request.getBirthDate(),
+                request.getGender(),
+                request.getAgreePersonalInfo(),
+                request.getAgreeHealthData(),
+                request.getAgreeCalendarData(),
+                request.getHasAacOfflineExperience()
+        );
+
+        return OnboardingResponse.from(user, false);
     }
 }

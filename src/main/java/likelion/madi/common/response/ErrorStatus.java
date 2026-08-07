@@ -18,6 +18,7 @@ public enum ErrorStatus {
     BAD_REQUEST_INVALID_SCHEDULE_TIME(HttpStatus.BAD_REQUEST, "INVALID_SCHEDULE_TIME", "일정 날짜/시간 형식이 올바르지 않습니다."),
     BAD_REQUEST_NOT_SUPPORTED_MEDIA_TYPE(HttpStatus.BAD_REQUEST, "NOT_SUPPORTED_MEDIA_TYPE", "지원하지 않는 미디어 타입입니다."),
     BAD_REQUEST_INVALID_IMAGE_SIZE(HttpStatus.BAD_REQUEST, "INVALID_IMAGE_SIZE", "이미지 파일 크기가 15MB 보다 큽니다."),
+    BAD_REQUEST_INVALID_ONBOARDING_INPUT(HttpStatus.BAD_REQUEST, "INVALID_ONBOARDING_INPUT", "필수 입력 항목이 누락되었거나 필수 약관 동의가 필요합니다." ),
 
     /// 401 UNAUTHORIZED
     UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED_USER", "인증되지 않은 사용자입니다."),
@@ -49,6 +50,7 @@ public enum ErrorStatus {
     CONFLICT_DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "DUPLICATE_LOGIN_ID", "이미 사용 중인 아이디입니다."),
     CONFLICT_LAST_LOGIN_METHOD(HttpStatus.CONFLICT, "LAST_LOGIN_METHOD", "마지막으로 남은 로그인 수단은 연동 해제할 수 없습니다."),
     CONFLICT_ALREADY_CONNECTED(HttpStatus.CONFLICT, "ALREADY_CONNECTED", "이미 연동되어 있습니다."),
+    CONFLICT_ALREADY_ONBOARDED_USER(HttpStatus.CONFLICT, "ALREADY_ONBOARDED_USER", "이미 온보딩 정보 등록이 완료된 사용자입니다."),
 
     /// 415 UNSUPPORTED MEDIA TYPE
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_MEDIA_TYPE", "지원하지 않는 Content-Type 입니다."),
