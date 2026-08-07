@@ -59,9 +59,10 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-    public void completeOnboarding(LocalDate birthDate, String gender,
+    public void completeOnboarding(String name, LocalDate birthDate, String gender,
                                     Boolean agreePersonalInfo, Boolean agreeHealthData,
                                     Boolean agreeCalendarData, Boolean hasAacOfflineExperience) {
+        this.name = name;
         this.birthDate = birthDate;
         this.gender = gender;
         this.agreePersonalInfo = agreePersonalInfo;

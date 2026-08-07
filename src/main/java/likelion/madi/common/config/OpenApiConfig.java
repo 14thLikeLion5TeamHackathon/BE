@@ -3,6 +3,7 @@ package likelion.madi.common.config;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ public class OpenApiConfig {
                                 .in(SecurityScheme.In.HEADER)
                                 .name("X-Refresh-Token")
                                 .description("리프레시 토큰을 입력하세요. 형식: Bearer <token>")))
+                .addSecurityItem(new SecurityRequirement().addList("Authorization"))
                 .info(new Info()
                         .title("HUFS Lion SSO Session API")
                         .description("소셜 로그인 및 JWT 기반 인증 API")
