@@ -1,11 +1,9 @@
 package likelion.madi.controller;
 
+import likelion.madi.domain.StatusTag;
+import likelion.madi.dto.response.StatusTagResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +13,8 @@ import likelion.madi.dto.request.CareRecordCreateForm;
 import likelion.madi.dto.response.CareRecordResponse;
 import likelion.madi.service.CareRecordService;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -39,5 +39,16 @@ public class CareRecordController {
                         result
                 )
         );
+    }
+
+    @Operation(summary = "상태 태그 목록 조회")
+    @GetMapping("/status-tags")
+    public ResponseEntity<ApiResponse<List<StatusTagResponse>>> getStatusTags() {
+        List<StatusTagResponse> result = careRecordService.getStatusTags();
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessStatus.STATUS_TAG_LIST_GET_SUCCESS.getStatusCode(),
+                SuccessStatus.STATUS_TAG_LIST_GET_SUCCESS.getMessage(),
+                result
+        ));
     }
 }
