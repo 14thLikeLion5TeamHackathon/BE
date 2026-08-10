@@ -34,11 +34,15 @@ public class AacStore {
     @Column(name = "longitude", length = 255)
     private String longitude;
 
+    @Column(name = "url", length = 255)
+    private String url;
+
     @Builder
-    public AacStore(String name, String address, String latitude, String longitude) {
+    public AacStore(String name, String address, String latitude, String longitude, String url) {
         this.name = name;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.url = url;
     }
 }

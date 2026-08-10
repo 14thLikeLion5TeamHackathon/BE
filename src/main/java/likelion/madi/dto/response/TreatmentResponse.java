@@ -33,8 +33,8 @@ public class TreatmentResponse {
                 .name(treatment.getName())
                 .category(treatment.getCategory())
                 .description(treatment.getDescription())
-                .storeName(treatment.getStoreName())
-                .storeLocation(treatment.getStoreLocation())
+                .storeName(treatment.getStore() != null ? treatment.getStore().getName() : null)
+                .storeLocation(treatment.getStore() != null ? treatment.getStore().getAddress() : null)
                 .build();
     }
 }
