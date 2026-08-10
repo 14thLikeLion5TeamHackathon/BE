@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-// 카카오 로그인 계정으로 메시지를 발송하므로 별도 연동 절차(전화번호 입력, 토큰 발급)가 없다.
-// 이 테이블은 "카카오톡 메시지 수신에 동의했는지"만 기록한다.
+// 카카오 로그인과 별개로 talk_message 동의를 받아 액세스/리프레시 토큰을 발급받아 저장한다.
+// consent는 메시지 수신 on/off 상태, accessToken/refreshToken은 실제 발송에 사용된다.
 @Entity
 @Table(name = "KAKAO_NOTIFICATION")
 @Getter
@@ -39,15 +39,30 @@ public class KakaoNotification {
     @Column(name = "consented_at")
     private LocalDateTime consentedAt;
 
+    @Column(name = "access_token", length = 255)
+    private String accessToken;
+
+    @Column(name = "refresh_token", length = 255)
+    private String refreshToken;
+
     @Builder
-    public KakaoNotification(User user, Boolean consent) {
+    public KakaoNotification(User user, Boolean consent, String accessToken, String refreshToken) {
         this.user = user;
         this.consent = consent;
         this.consentedAt = LocalDateTime.now();
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
     }
 
     public void updateConsent(Boolean consent) {
         this.consent = consent;
+        this.consentedAt = LocalDateTime.now();
+    }
+
+    public void updateTokens(String accessToken, String refreshToken) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.consent = true;
         this.consentedAt = LocalDateTime.now();
     }
 }
