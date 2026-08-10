@@ -16,10 +16,10 @@ public class TreatmentService {
 
     private final TreatmentRepository treatmentRepository;
 
-    // 시술명 검색 API
+    // 시술명 검색 API (키워드+카테고리 필터 통합)
     @Transactional(readOnly = true)
-    public List<TreatmentResponse> search(String keyword) {
-        return treatmentRepository.findByNameContaining(keyword)
+    public List<TreatmentResponse> search(String keyword, String category) {
+        return treatmentRepository.search(keyword, category)
                 .stream()
                 .map(TreatmentResponse::from)
                 .toList();
