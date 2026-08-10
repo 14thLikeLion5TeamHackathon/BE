@@ -49,18 +49,20 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                     continue;
                 }
                 List<String> cols = parseCsvLine(line);
-                if (cols.size() < 6) {
+                if (cols.size() < 8) {
                     continue;
                 }
-                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명, 매장URL
+                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명, 매장URL, 매장위도, 매장경도
                 String storeName = cols.get(0);
                 String storeLocation = cols.get(1);
                 String category = cols.get(2);
                 String name = cols.get(3);
                 String description = cols.get(4);
                 String storeUrl = cols.get(5);
+                String storeLatitude = cols.get(6);
+                String storeLongitude = cols.get(7);
 
-                AacStore store = resolveStore(storeCache, storeName, storeLocation, storeUrl);
+                AacStore store = resolveStore(storeCache, storeName, storeLocation, storeUrl, storeLatitude, storeLongitude);
 
                 treatments.add(Treatment.builder()
                         .name(name)
@@ -75,7 +77,8 @@ public class TreatmentSeedLoader implements CommandLineRunner {
         log.info("Treatment 시드 데이터 {}건 로딩 완료 (매장 {}곳)", treatments.size(), storeCache.size());
     }
 
-    private AacStore resolveStore(Map<String, AacStore> cache, String name, String address, String url) {
+    private AacStore resolveStore(Map<String, AacStore> cache, String name, String address,
+                                  String url, String latitude, String longitude) {
         String key = name + "|" + address;
         if (cache.containsKey(key)) {
             return cache.get(key);
@@ -86,6 +89,8 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                                 .name(name)
                                 .address(address)
                                 .url(url)
+                                .latitude(latitude)
+                                .longitude(longitude)
                                 .build()
                 ));
         cache.put(key, store);

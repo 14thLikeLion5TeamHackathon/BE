@@ -143,6 +143,9 @@ public class CareCardService {
                         .storeId(store.getStoreId())
                         .name(store.getName())
                         .address(store.getAddress())
+                        .url(store.getUrl())
+                        .latitude(store.getLatitude())
+                        .longitude(store.getLongitude())
                         .build())
                 .build();
     }

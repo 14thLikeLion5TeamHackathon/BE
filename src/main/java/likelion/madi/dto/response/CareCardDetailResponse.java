@@ -75,12 +75,19 @@ public class CareCardDetailResponse {
         private Long storeId;
         private String name;
         private String address;
+        private String url;
+        private String latitude;
+        private String longitude;
 
         @Builder
-        public VisitedStore(Long storeId, String name, String address) {
+        public VisitedStore(Long storeId, String name, String address, String url,
+                            String latitude, String longitude) {
             this.storeId = storeId;
             this.name = name;
             this.address = address;
+            this.url = url;
+            this.latitude = latitude;
+            this.longitude = longitude;
         }
     }
 }
