@@ -1,6 +1,8 @@
 package likelion.madi.common.config;
 
+import likelion.madi.domain.AacStore;
 import likelion.madi.domain.Treatment;
+import likelion.madi.repository.AacStoreRepository;
 import likelion.madi.repository.TreatmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +15,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -22,6 +26,7 @@ public class TreatmentSeedLoader implements CommandLineRunner {
     private static final String CSV_PATH = "data/treatments.csv";
 
     private final TreatmentRepository treatmentRepository;
+    private final AacStoreRepository aacStoreRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -29,6 +34,8 @@ public class TreatmentSeedLoader implements CommandLineRunner {
             log.info("Treatment 데이터 이미 존재 - 시드 로딩 스킵");
             return;
         }
+
+        Map<String, AacStore> storeCache = new HashMap<>();
 
         List<Treatment> treatments = new ArrayList<>();
         InputStream is = new ClassPathResource(CSV_PATH).getInputStream();
@@ -42,27 +49,55 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                     continue;
                 }
                 List<String> cols = parseCsvLine(line);
-                if (cols.size() < 5) {
+                if (cols.size() < 8) {
                     continue;
                 }
-                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명
+                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명, 매장URL, 매장위도, 매장경도
+                String storeName = cols.get(0);
+                String storeLocation = cols.get(1);
                 String category = cols.get(2);
                 String name = cols.get(3);
                 String description = cols.get(4);
+                String storeUrl = cols.get(5);
+                String storeLatitude = cols.get(6);
+                String storeLongitude = cols.get(7);
+
+                AacStore store = resolveStore(storeCache, storeName, storeLocation, storeUrl, storeLatitude, storeLongitude);
 
                 treatments.add(Treatment.builder()
                         .name(name)
                         .category(category)
                         .description(description)
+                        .store(store)
                         .build());
             }
         }
 
         treatmentRepository.saveAll(treatments);
-        log.info("Treatment 시드 데이터 {}건 로딩 완료", treatments.size());
+        log.info("Treatment 시드 데이터 {}건 로딩 완료 (매장 {}곳)", treatments.size(), storeCache.size());
     }
 
-    // 따옴표로 감싼 콤마(예: "디자인 제모(목뒤, 헤어라인, 구레나룻) 1회")를 안전하게 처리하는 간단한 CSV 파서
+    private AacStore resolveStore(Map<String, AacStore> cache, String name, String address,
+                                  String url, String latitude, String longitude) {
+        String key = name + "|" + address;
+        if (cache.containsKey(key)) {
+            return cache.get(key);
+        }
+        AacStore store = aacStoreRepository.findByNameAndAddress(name, address)
+                .orElseGet(() -> aacStoreRepository.save(
+                        AacStore.builder()
+                                .name(name)
+                                .address(address)
+                                .url(url)
+                                .latitude(latitude)
+                                .longitude(longitude)
+                                .build()
+                ));
+        cache.put(key, store);
+        return store;
+    }
+
+    // 따옴표로 감싼 콤마를 안전하게 처리하는 간단한 CSV 파서
     private List<String> parseCsvLine(String line) {
         List<String> result = new ArrayList<>();
         StringBuilder field = new StringBuilder();

@@ -23,12 +23,13 @@ public class TreatmentController {
 
     private final TreatmentService treatmentService;
 
-    @Operation(summary = "시술명 검색")
+    @Operation(summary = "시술명 검색 (필터+검색 통합)")
     @GetMapping("/treatments")
     public ResponseEntity<ApiResponse<List<TreatmentResponse>>> searchTreatments(
-            @RequestParam String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category
     ) {
-        List<TreatmentResponse> result = treatmentService.search(keyword);
+        List<TreatmentResponse> result = treatmentService.search(keyword, category);
         return ResponseEntity.ok(
                 ApiResponse.success(
                         SuccessStatus.TREATMENT_SEARCH_SUCCESS.getStatusCode(),
