@@ -1,4 +1,7 @@
 package likelion.madi.controller;
+
+import likelion.madi.service.CalendarService; // 패키지 경로에 맞게 확인
+import likelion.madi.dto.request.CalendarConnectRequest; //
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -8,28 +11,22 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/calendar")
 @Tag(name = "Calendar", description = "구글 캘린더 연동 API")
 public class CalendarController {
 
     private final CalendarService calendarService;
 
-    @Operation(
-            summary = "구글 캘린더 연결 처리",
-            description = "마이페이지에서 전달받은 구글 인증 코드를 통해 접근 권한을 획득하고 연동 상태를 저장합니다."
-    )
-    @PostMapping("/calendar/connect")
-    public ResponseEntity<CommonResponse<Void>> connectCalendar(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
+    @Operation(summary = "구글 캘린더 연동", description = "구글 인증 코드를 받아 캘린더 연동 토큰을 발급받고 저장합니다.")
+    @PostMapping("/connect")
+    public ResponseEntity<Void> connectCalendar(
+            @AuthenticationPrincipal Long userId,
             @RequestBody @Valid CalendarConnectRequest request) {
 
-        // 헤더의 JWT 토큰에서 추출한 userId와 프론트가 전달한 authCode 전달
-        calendarService.connectGoogleCalendar(userDetails.getUserId(), request.getAuthCode());
+        // 🌟 request.getRedirectUri() 를 서비스로 같이 넘겨줍니다!
+        calendarService.connectGoogleCalendar(userId, request.getAuthCode(), request.getRedirectUri());
 
-        // 공통 응답 포맷으로 성공 반환
-        return ResponseEntity.ok(
-                CommonResponse.success(200, "구글 캘린더 연동이 완료되었습니다.", null)
-        );
+        return ResponseEntity.ok().build();
     }
 }
