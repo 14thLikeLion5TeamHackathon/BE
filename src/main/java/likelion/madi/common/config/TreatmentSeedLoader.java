@@ -37,6 +37,7 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                 new InputStreamReader(is, StandardCharsets.UTF_8))) {
 
             String line = reader.readLine(); // 헤더 스킵
+            // TreatmentSeedLoader.java
             while ((line = reader.readLine()) != null) {
                 if (line.isBlank()) {
                     continue;
@@ -45,7 +46,9 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                 if (cols.size() < 5) {
                     continue;
                 }
-                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명
+                // 여기 ↓ 이 블록을 기존 내용과 바꿔치기
+                String storeName = cols.get(0);
+                String storeLocation = cols.get(1);
                 String category = cols.get(2);
                 String name = cols.get(3);
                 String description = cols.get(4);
@@ -54,6 +57,8 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                         .name(name)
                         .category(category)
                         .description(description)
+                        .storeName(storeName)
+                        .storeLocation(storeLocation)
                         .build());
             }
         }

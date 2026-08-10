@@ -31,10 +31,19 @@ public class Treatment {
     @Column(name = "description", length = 255)
     private String description;
 
+    @Column(name = "store_name", length = 100)
+    private String storeName;
+
+    @Column(name = "store_location", length = 255)
+    private String storeLocation;
+
     @Builder
-    public Treatment(String name, String category, String description) {
+    public Treatment(String name, String category, String description, String storeName, String storeLocation) {
         this.name = name;
         this.category = category;
         this.description = description;
+        this.storeName = storeName;
+        this.storeLocation = storeLocation;
     }
+
 }

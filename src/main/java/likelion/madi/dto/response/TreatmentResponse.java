@@ -13,13 +13,18 @@ public class TreatmentResponse {
     private String name;
     private String category;
     private String description;
+    private String storeName;
+    private String storeLocation;
 
     @Builder
-    public TreatmentResponse(Long treatmentId, String name, String category, String description) {
+    public TreatmentResponse(Long treatmentId, String name, String category, String description,
+                             String storeName, String storeLocation) {
         this.treatmentId = treatmentId;
         this.name = name;
         this.category = category;
         this.description = description;
+        this.storeName = storeName;
+        this.storeLocation = storeLocation;
     }
 
     public static TreatmentResponse from(Treatment treatment) {
@@ -28,6 +33,8 @@ public class TreatmentResponse {
                 .name(treatment.getName())
                 .category(treatment.getCategory())
                 .description(treatment.getDescription())
+                .storeName(treatment.getStoreName())
+                .storeLocation(treatment.getStoreLocation())
                 .build();
     }
 }
