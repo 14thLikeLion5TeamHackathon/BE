@@ -49,7 +49,7 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                     continue;
                 }
                 List<String> cols = parseCsvLine(line);
-                if (cols.size() < 8) {
+                if (cols.size() < 10) {
                     continue;
                 }
                 // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명, 매장URL, 매장위도, 매장경도
@@ -61,6 +61,10 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                 String storeUrl = cols.get(5);
                 String storeLatitude = cols.get(6);
                 String storeLongitude = cols.get(7);
+                String recoveryTotalDaysStr = cols.get(8);
+                String recoveryTransitionDayStr = cols.get(9);
+                Integer recoveryTotalDays = recoveryTotalDaysStr.isBlank() ? null : Integer.parseInt(recoveryTotalDaysStr.trim());
+                Integer recoveryTransitionDay = recoveryTransitionDayStr.isBlank() ? null : Integer.parseInt(recoveryTransitionDayStr.trim());
 
                 AacStore store = resolveStore(storeCache, storeName, storeLocation, storeUrl, storeLatitude, storeLongitude);
 
@@ -69,6 +73,8 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                         .category(category)
                         .description(description)
                         .store(store)
+                        .recoveryTotalDays(recoveryTotalDays)
+                        .recoveryTransitionDay(recoveryTransitionDay)
                         .build());
             }
         }

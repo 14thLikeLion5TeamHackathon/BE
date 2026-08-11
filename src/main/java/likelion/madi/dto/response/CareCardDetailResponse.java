@@ -16,25 +16,22 @@ public class CareCardDetailResponse {
     private LocalDate treatmentDate;
     private Integer dDay;
     private Integer recoveryTotalDays;
+    private Integer recoveryTransitionDay;
     private List<String> todayCare;
-    private List<RecoveryGuideItem> recoveryGuide;
-    private List<String> caution;
     private FeedbackQuota feedbackQuota;
     private VisitedStore visitedStore;
 
     @Builder
     public CareCardDetailResponse(Long cardId, String treatmentName, LocalDate treatmentDate, Integer dDay,
-                                  Integer recoveryTotalDays, List<String> todayCare,
-                                  List<RecoveryGuideItem> recoveryGuide, List<String> caution,
+                                  Integer recoveryTotalDays, Integer recoveryTransitionDay, List<String> todayCare,
                                   FeedbackQuota feedbackQuota, VisitedStore visitedStore) {
         this.cardId = cardId;
         this.treatmentName = treatmentName;
         this.treatmentDate = treatmentDate;
         this.dDay = dDay;
         this.recoveryTotalDays = recoveryTotalDays;
+        this.recoveryTransitionDay = recoveryTransitionDay;
         this.todayCare = todayCare;
-        this.recoveryGuide = recoveryGuide;
-        this.caution = caution;
         this.feedbackQuota = feedbackQuota;
         this.visitedStore = visitedStore;
     }

@@ -30,13 +30,21 @@ public class Treatment {
     @JoinColumn(name = "store_id")
     private AacStore store;
 
+    @Column(name = "recovery_total_days")
+    private Integer recoveryTotalDays;
+
+    @Column(name = "recovery_transition_day")
+    private Integer recoveryTransitionDay;
 
     @Builder
-    public Treatment(String name, String category, String description, AacStore store) {
+    public Treatment(String name, String category, String description, AacStore store,
+                     Integer recoveryTotalDays, Integer recoveryTransitionDay) {
         this.name = name;
         this.category = category;
         this.description = description;
         this.store = store;
+        this.recoveryTotalDays = recoveryTotalDays;
+        this.recoveryTransitionDay = recoveryTransitionDay;
     }
 
 }

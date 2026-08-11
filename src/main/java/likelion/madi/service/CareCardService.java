@@ -97,36 +97,16 @@ public class CareCardService {
                     .dDay(dDay)
                     .recoveryTotalDays(null)
                     .todayCare(List.of())
-                    .recoveryGuide(List.of())
-                    .caution(List.of())
                     .feedbackQuota(buildFeedbackQuota(userId))
                     .visitedStore(null)
                     .build();
         }
 
-        // 회복 (D+1, 3, 등등 다 가져오기)
-        List<RecoveryGuide> guides = recoveryGuideRepository.findByTreatmentOrderByDDayMinAsc(treatment);
 
-        // 화면용 회복가이드 리스트로 변환
-        List<CareCardDetailResponse.RecoveryGuideItem> guideItems = guides.stream()
-                .map(g -> CareCardDetailResponse.RecoveryGuideItem.builder()
-                        .dDayMin(g.getDDayMin())
-                        .dDayMax(g.getDDayMax())
-                        .label(g.getCareGuidance())
-                        .isCurrent(dDay >= g.getDDayMin() && dDay <= g.getDDayMax())
-                        .build())
-                .toList();
 
-        RecoveryGuide currentGuide = guides.stream()
-                .filter(g -> dDay >= g.getDDayMin() && dDay <= g.getDDayMax())
-                .findFirst()
-                .orElse(null);
-
-        // 총 회복 기간 계산
-        Integer recoveryTotalDays = guides.stream()
-                .map(RecoveryGuide::getDDayMax)
-                .max(Integer::compareTo)
-                .orElse(null);
+        // 총 회복 기간 계산 (Treatment에서 직접 가져옴)
+        Integer recoveryTotalDays = treatment.getRecoveryTotalDays();
+        Integer recoveryTransitionDay = treatment.getRecoveryTransitionDay();
 
         AacStore store = treatment.getStore();
 
@@ -136,9 +116,8 @@ public class CareCardService {
                 .treatmentDate(careCard.getTreatmentDate())
                 .dDay(dDay)
                 .recoveryTotalDays(recoveryTotalDays)
+                .recoveryTransitionDay(recoveryTransitionDay)
                 .todayCare(splitLines(todayCareService.generateOrGetTodayCare(careCard, treatment, dDay, currentGuide, city, district)))
-                .recoveryGuide(guideItems)
-                .caution(splitLines(currentGuide != null ? currentGuide.getCaution() : null))
                 .feedbackQuota(buildFeedbackQuota(userId))
                 .visitedStore(store == null ? null : CareCardDetailResponse.VisitedStore.builder()
                         .storeId(store.getStoreId())
