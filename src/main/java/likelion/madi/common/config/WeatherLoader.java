@@ -22,7 +22,7 @@ public class WeatherLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        ClassPathResource resource = new ClassPathResource("weather_data.csv");
+        ClassPathResource resource = new ClassPathResource("data/weather_data.csv");
 
         try (BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
