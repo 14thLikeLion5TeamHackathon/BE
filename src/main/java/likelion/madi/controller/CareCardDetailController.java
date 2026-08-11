@@ -9,10 +9,7 @@ import likelion.madi.service.CareCardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,10 +23,12 @@ public class CareCardDetailController {
     @GetMapping("/{cardId}")
     public ResponseEntity<ApiResponse<CareCardDetailResponse>> getCareCardDetail(
             Authentication authentication,
-            @PathVariable Long cardId
+            @PathVariable Long cardId,
+            @RequestParam("city") String city,
+            @RequestParam("district") String district
     ) {
         Long userId = (Long) authentication.getPrincipal();
-        CareCardDetailResponse result = careCardService.getDetail(userId, cardId);
+        CareCardDetailResponse result = careCardService.getDetail(userId, cardId, city, district);
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessStatus.CARE_CARD_DETAIL_GET_SUCCESS.getStatusCode(),
                 SuccessStatus.CARE_CARD_DETAIL_GET_SUCCESS.getMessage(),

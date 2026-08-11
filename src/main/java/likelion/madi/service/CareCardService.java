@@ -37,6 +37,7 @@ public class CareCardService {
     private final UserRepository userRepository;
     private final RecoveryGuideRepository recoveryGuideRepository;
     private final AiFeedbackRepository aiFeedbackRepository;
+    private final TodayCareService todayCareService;
 
     // 카드 생성
     public CareCardCreateResponse create(Long userId, CareCardCreateRequest request) {
@@ -73,7 +74,7 @@ public class CareCardService {
 
     // 케어카드 상세조회
     @Transactional(readOnly = true)
-    public CareCardDetailResponse getDetail(Long userId, Long cardId) {
+    public CareCardDetailResponse getDetail(Long userId, Long cardId, String city, String district) {
         CareCard careCard = careCardRepository.findById(cardId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
 
@@ -135,7 +136,7 @@ public class CareCardService {
                 .treatmentDate(careCard.getTreatmentDate())
                 .dDay(dDay)
                 .recoveryTotalDays(recoveryTotalDays)
-                .todayCare(splitLines(currentGuide != null ? currentGuide.getTodayCare() : null))
+                .todayCare(splitLines(todayCareService.generateOrGetTodayCare(careCard, treatment, dDay, currentGuide, city, district)))
                 .recoveryGuide(guideItems)
                 .caution(splitLines(currentGuide != null ? currentGuide.getCaution() : null))
                 .feedbackQuota(buildFeedbackQuota(userId))
