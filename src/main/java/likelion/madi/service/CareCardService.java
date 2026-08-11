@@ -37,6 +37,7 @@ public class CareCardService {
     private final UserRepository userRepository;
     private final RecoveryGuideRepository recoveryGuideRepository;
     private final AiFeedbackRepository aiFeedbackRepository;
+    private final TodayCareService todayCareService;
 
     // 카드 생성
     public CareCardCreateResponse create(Long userId, CareCardCreateRequest request) {
@@ -73,7 +74,7 @@ public class CareCardService {
 
     // 케어카드 상세조회
     @Transactional(readOnly = true)
-    public CareCardDetailResponse getDetail(Long userId, Long cardId) {
+    public CareCardDetailResponse getDetail(Long userId, Long cardId, String city, String district) {
         CareCard careCard = careCardRepository.findById(cardId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
 
@@ -96,36 +97,16 @@ public class CareCardService {
                     .dDay(dDay)
                     .recoveryTotalDays(null)
                     .todayCare(List.of())
-                    .recoveryGuide(List.of())
-                    .caution(List.of())
                     .feedbackQuota(buildFeedbackQuota(userId))
                     .visitedStore(null)
                     .build();
         }
 
-        // 회복 (D+1, 3, 등등 다 가져오기)
-        List<RecoveryGuide> guides = recoveryGuideRepository.findByTreatmentOrderByDDayMinAsc(treatment);
 
-        // 화면용 회복가이드 리스트로 변환
-        List<CareCardDetailResponse.RecoveryGuideItem> guideItems = guides.stream()
-                .map(g -> CareCardDetailResponse.RecoveryGuideItem.builder()
-                        .dDayMin(g.getDDayMin())
-                        .dDayMax(g.getDDayMax())
-                        .label(g.getCareGuidance())
-                        .isCurrent(dDay >= g.getDDayMin() && dDay <= g.getDDayMax())
-                        .build())
-                .toList();
 
-        RecoveryGuide currentGuide = guides.stream()
-                .filter(g -> dDay >= g.getDDayMin() && dDay <= g.getDDayMax())
-                .findFirst()
-                .orElse(null);
-
-        // 총 회복 기간 계산
-        Integer recoveryTotalDays = guides.stream()
-                .map(RecoveryGuide::getDDayMax)
-                .max(Integer::compareTo)
-                .orElse(null);
+        // 총 회복 기간 계산 (Treatment에서 직접 가져옴)
+        Integer recoveryTotalDays = treatment.getRecoveryTotalDays();
+        Integer recoveryTransitionDay = treatment.getRecoveryTransitionDay();
 
         AacStore store = treatment.getStore();
 
@@ -135,9 +116,8 @@ public class CareCardService {
                 .treatmentDate(careCard.getTreatmentDate())
                 .dDay(dDay)
                 .recoveryTotalDays(recoveryTotalDays)
-                .todayCare(splitLines(currentGuide != null ? currentGuide.getTodayCare() : null))
-                .recoveryGuide(guideItems)
-                .caution(splitLines(currentGuide != null ? currentGuide.getCaution() : null))
+                .recoveryTransitionDay(recoveryTransitionDay)
+                .todayCare(splitLines(todayCareService.generateOrGetTodayCare(careCard, treatment, dDay, city, district)))
                 .feedbackQuota(buildFeedbackQuota(userId))
                 .visitedStore(store == null ? null : CareCardDetailResponse.VisitedStore.builder()
                         .storeId(store.getStoreId())

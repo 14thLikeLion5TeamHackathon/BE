@@ -1,11 +1,13 @@
 package likelion.madi.repository;
 
 import likelion.madi.domain.AiFeedback;
+import likelion.madi.domain.CareRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 public interface AiFeedbackRepository extends JpaRepository<AiFeedback, Long> {
 
@@ -15,4 +17,7 @@ public interface AiFeedbackRepository extends JpaRepository<AiFeedback, Long> {
     long countTodayByUser(@Param("userId") Long userId,
                           @Param("startOfDay") LocalDateTime startOfDay,
                           @Param("endOfDay") LocalDateTime endOfDay);
+
+
+    Optional<AiFeedback> findByCareRecord(CareRecord careRecord);
 }
