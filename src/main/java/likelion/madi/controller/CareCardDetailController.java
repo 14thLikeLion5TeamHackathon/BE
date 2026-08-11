@@ -5,7 +5,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import likelion.madi.common.response.ApiResponse;
 import likelion.madi.common.response.SuccessStatus;
 import likelion.madi.dto.response.CareCardDetailResponse;
+import likelion.madi.dto.response.CareRecordTimelineResponse;
 import likelion.madi.service.CareCardService;
+import likelion.madi.service.CareRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class CareCardDetailController {
 
     private final CareCardService careCardService;
+    private final CareRecordService careRecordService;
 
     @Operation(summary = "케어카드 상세 조회")
     @GetMapping("/{cardId}")
@@ -32,6 +35,21 @@ public class CareCardDetailController {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessStatus.CARE_CARD_DETAIL_GET_SUCCESS.getStatusCode(),
                 SuccessStatus.CARE_CARD_DETAIL_GET_SUCCESS.getMessage(),
+                result
+        ));
+    }
+
+    @Operation(summary = "카드별 이전 기록(회복 타임라인) 조회")
+    @GetMapping("/{cardId}/records")
+    public ResponseEntity<ApiResponse<CareRecordTimelineResponse>> getCareCardRecords(
+            Authentication authentication,
+            @PathVariable Long cardId
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+        CareRecordTimelineResponse result = careRecordService.getTimeline(userId, cardId);
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessStatus.CARE_CARD_RECORDS_GET_SUCCESS.getStatusCode(),
+                SuccessStatus.CARE_CARD_RECORDS_GET_SUCCESS.getMessage(),
                 result
         ));
     }

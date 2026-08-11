@@ -3,8 +3,12 @@ package likelion.madi.service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import likelion.madi.dto.response.CareRecordTimelineResponse;
 import likelion.madi.dto.response.StatusTagResponse;
+import likelion.madi.repository.AiFeedbackRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import likelion.madi.common.exception.BadRequestException;
+import likelion.madi.common.exception.ForbiddenException;
 import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
 import likelion.madi.domain.CareCard;
@@ -34,6 +39,7 @@ public class CareRecordService {
     private final CareCardRepository careCardRepository;
     private final StatusTagRepository statusTagRepository;
     private final LocalFileStorageService fileStorageService;
+    private final AiFeedbackRepository aiFeedbackRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
 
@@ -98,5 +104,53 @@ public class CareRecordService {
         return statusTagRepository.findAll().stream()
                 .map(StatusTagResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CareRecordTimelineResponse getTimeline(Long userId, Long cardId) {
+        CareCard careCard = careCardRepository.findById(cardId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
+
+        if (!careCard.getUser().getUserId().equals(userId)) {
+            throw new ForbiddenException(ErrorStatus.FORBIDDEN_RESOURCE_ACCESS);
+        }
+
+        List<CareRecord> records = careRecordRepository.findByCareCardOrderByRecordedAtAsc(careCard);
+
+        List<CareRecordTimelineResponse.CareRecordTimelineItem> items = records.stream()
+                .map(this::toTimelineItem)
+                .toList();
+
+        return CareRecordTimelineResponse.builder()
+                .cardId(careCard.getCardId())
+                .careRecords(items)
+                .build();
+    }
+
+    private CareRecordTimelineResponse.CareRecordTimelineItem toTimelineItem(CareRecord record) {
+        Map<String, Integer> intensityByTag = record.getTags().stream()
+                .collect(Collectors.toMap(t -> t.getStatusTag().getName(), CareRecordTag::getIntensity));
+
+        CareRecordTimelineResponse.AiFeedbackItem aiFeedbackItem = aiFeedbackRepository.findByCareRecord(record)
+                .map(f -> CareRecordTimelineResponse.AiFeedbackItem.builder()
+                        .feedbackId(f.getFeedbackId())
+                        .changeSummary(f.getChangeSummary())
+                        .careGuidance(f.getCareGuidance())
+                        .needsConsultation(f.getNeedsConsultation())
+                        .build())
+                .orElse(null);
+
+        return CareRecordTimelineResponse.CareRecordTimelineItem.builder()
+                .recordId(record.getRecordId())
+                .recordedAt(record.getRecordedAt().toLocalDate())
+                .dDay(record.getDDay())
+                .photoUrl(record.getPhotoUrl())
+                .statusDescription(record.getStatusDescription())
+                .redness(intensityByTag.get("붉은기"))
+                .swelling(intensityByTag.get("부기"))
+                .pain(intensityByTag.get("통증"))
+                .dryness(intensityByTag.get("건조함"))
+                .aiFeedback(aiFeedbackItem)
+                .build();
     }
 }

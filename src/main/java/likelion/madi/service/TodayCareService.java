@@ -52,20 +52,20 @@ public class TodayCareService {
     // 요 트랜잭션은 메서드가 호출될 때마다 완전히 새로운 쓰기 가능한 트랜잭션 만들어서 실행!
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String generateOrGetTodayCare(CareCard careCard, Treatment treatment, int dDay,
-                                         RecoveryGuide currentGuide, String city, String district) {
+                                          String city, String district) {
         LocalDate today = LocalDate.now();
 
         return todayCareMessageRepository.findByCareCardAndTargetDate(careCard, today)
                 .map(TodayCareMessage::getGeneratedText)
-                .orElseGet(() -> generateAndCache(careCard, treatment, dDay, currentGuide, city, district, today));
+                .orElseGet(() -> generateAndCache(careCard, treatment, dDay, city, district, today));
     }
 
     private String generateAndCache(CareCard careCard, Treatment treatment, int dDay,
-                                    RecoveryGuide currentGuide, String city, String district, LocalDate today) {
-        String fallback = currentGuide != null ? currentGuide.getTodayCare() : null;
+                                    String city, String district, LocalDate today) {
+        String fallback = "오늘의 케어 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요.";
 
         try {
-            String prompt = buildPrompt(careCard, treatment, dDay, currentGuide, city, district);
+            String prompt = buildPrompt(careCard, treatment, dDay, city, district);
             String generated = callOpenAi(prompt);
 
             todayCareMessageRepository.save(TodayCareMessage.builder()
@@ -80,20 +80,14 @@ public class TodayCareService {
             return fallback;
         }
     }
-
     private String buildPrompt(CareCard careCard, Treatment treatment, int dDay,
-                               RecoveryGuide currentGuide, String city, String district) {
+                               String city, String district) {
         WeatherResponseDto weather = weatherService.getWeatherAndEnvironment(LocalDate.now(), city, district);
         List<CareRecord> recentRecords = careRecordRepository.findTop3ByCareCardOrderByRecordedAtDesc(careCard);
 
         StringBuilder sb = new StringBuilder();
         sb.append("시술명: ").append(treatment != null ? treatment.getName() : "미등록 시술").append("\n");
         sb.append("경과: D+").append(dDay).append("\n\n");
-
-        if (currentGuide != null) {
-            sb.append("기본 회복 가이드: ").append(currentGuide.getTodayCare()).append("\n");
-            sb.append("주의사항: ").append(currentGuide.getCaution()).append("\n\n");
-        }
 
         sb.append("오늘 날씨: ").append(weather.getWeatherCondition())
                 .append(", 기온 ").append(weather.getTemperature()).append("도")

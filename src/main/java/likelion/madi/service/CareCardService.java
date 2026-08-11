@@ -117,7 +117,7 @@ public class CareCardService {
                 .dDay(dDay)
                 .recoveryTotalDays(recoveryTotalDays)
                 .recoveryTransitionDay(recoveryTransitionDay)
-                .todayCare(splitLines(todayCareService.generateOrGetTodayCare(careCard, treatment, dDay, currentGuide, city, district)))
+                .todayCare(splitLines(todayCareService.generateOrGetTodayCare(careCard, treatment, dDay, city, district)))
                 .feedbackQuota(buildFeedbackQuota(userId))
                 .visitedStore(store == null ? null : CareCardDetailResponse.VisitedStore.builder()
                         .storeId(store.getStoreId())

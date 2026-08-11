@@ -9,4 +9,6 @@ import java.util.List;
 
 public interface CareRecordRepository extends JpaRepository<CareRecord, Long> {
     List<CareRecord> findTop3ByCareCardOrderByRecordedAtDesc(CareCard careCard);
+
+    List<CareRecord> findByCareCardOrderByRecordedAtAsc(CareCard careCard);
 }
