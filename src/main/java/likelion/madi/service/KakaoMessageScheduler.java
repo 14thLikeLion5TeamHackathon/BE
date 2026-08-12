@@ -28,4 +28,9 @@ public class KakaoMessageScheduler {
     public void sendDailyRecordReminders() {
         notificationService.sendRecordReminder();
     }
+
+    @Scheduled(cron = "0 0 21 * * *")
+    public void sendDailyRiskWarnings() {
+        notificationService.sendRiskWarnings();
+    }
 }

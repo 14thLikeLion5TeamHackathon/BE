@@ -11,6 +11,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -21,21 +22,26 @@ public class KakaoMessageClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void sendMessage(String accessToken, String text, String link) {
+        sendMessage(accessToken, text, link, "내 상태 기록하기");
+    }
+
+    public void sendMessage(String accessToken, String text, String link, String buttonTitle) {
         String sendUrl = "https://kapi.kakao.com/v2/api/talk/memo/default/send";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + accessToken);
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        Map<String, Object> templateObject = Map.of(
-                "object_type", "text",
-                "text", text,
-                "link", Map.of(
-                        "web_url", link,
-                        "mobile_web_url", link
-                ),
-               "button_title", "내 상태 기록하기"
-        );
+        Map<String, Object> templateObject = new HashMap<>();
+        templateObject.put("object_type", "text");
+        templateObject.put("text", text);
+        templateObject.put("link", Map.of(
+                "web_url", link,
+                "mobile_web_url", link
+        ));
+        if (buttonTitle != null) {
+            templateObject.put("button_title", buttonTitle);
+        }
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("template_object", writeAsJson(templateObject));

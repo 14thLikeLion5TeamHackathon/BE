@@ -34,6 +34,7 @@ public class NotificationService {
     private final KakaoOAuthClient kakaoOAuthClient;
     private final KakaoMessageClient kakaoMessageClient;
     private final TodayCareService todayCareService;
+    private final RiskWarningService riskWarningService;
 
     @Transactional
     public KakaoNotificationResponse connectKakaoNotification(Long userId, KakaoNotificationConnectRequest request) {
@@ -93,7 +94,7 @@ public class NotificationService {
 
         String message = todayCareService.generateOrGetTodayCare(activeCard, treatment, dDay, city, district);
 
-        kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000");
+        kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
     }
 
     @Transactional
@@ -130,5 +131,25 @@ public class NotificationService {
         }
         int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
         return dDay <= treatment.getRecoveryTotalDays();
+    }
+
+    @Transactional
+    public void sendRiskWarnings() {
+        List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
+
+        for (KakaoNotification notification : notifications) {
+            User user = notification.getUser();
+
+            Optional<String> warning = riskWarningService.checkTomorrowRisk(user);
+
+            if (warning.isPresent()) {
+                kakaoMessageClient.sendMessage(
+                        notification.getAccessToken(),
+                        warning.get(),
+                        "http://localhost:3000",
+                        "일정 확인하기"
+                );
+            }
+        }
     }
 }
