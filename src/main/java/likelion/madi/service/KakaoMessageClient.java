@@ -20,7 +20,7 @@ public class KakaoMessageClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public void sendMessage(String accessToken, String text) {
+    public void sendMessage(String accessToken, String text, String link) {
         String sendUrl = "https://kapi.kakao.com/v2/api/talk/memo/default/send";
 
         HttpHeaders headers = new HttpHeaders();
@@ -31,9 +31,10 @@ public class KakaoMessageClient {
                 "object_type", "text",
                 "text", text,
                 "link", Map.of(
-                        "web_url", "http://localhost:3000",
-                        "mobile_web_url", "http://localhost:3000"
-                )
+                        "web_url", link,
+                        "mobile_web_url", link
+                ),
+               "button_title", "내 상태 기록하기"
         );
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();

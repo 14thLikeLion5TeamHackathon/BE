@@ -93,7 +93,32 @@ public class NotificationService {
 
         String message = todayCareService.generateOrGetTodayCare(activeCard, treatment, dDay, city, district);
 
-        kakaoMessageClient.sendMessage(notification.getAccessToken(), message);
+        kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000");
+    }
+
+    @Transactional
+    public void sendRecordReminder() {
+        List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
+
+        for (KakaoNotification notification : notifications) {
+            User user = notification.getUser();
+            List<CareCard> cards = careCardRepository.findByUser(user);
+
+            for (CareCard card : cards) {
+                int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
+                if (dDay == 3 || dDay == 7) {
+                    CareCardTreatment primary = card.getTreatments().get(0);
+                    String treatmentName = primary.getTreatment() != null
+                            ? primary.getTreatment().getName()
+                            : primary.getCustomName();
+
+                    String message = treatmentName + " 받은 지 " + dDay + "일차예요! 오늘 상태를 기록해보세요.";
+                    String link = "http://localhost:3000/record/" + card.getCardId();
+
+                    kakaoMessageClient.sendMessage(notification.getAccessToken(), message, link);
+                }
+            }
+        }
     }
 
     // 진행중인 카드인지 판단 (회복 총 기간을 넘지 않았는지)
