@@ -2,12 +2,16 @@ package likelion.madi.service;
 
 import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
+import likelion.madi.domain.CareCard;
+import likelion.madi.domain.CareCardTreatment;
 import likelion.madi.domain.KakaoNotification;
+import likelion.madi.domain.Treatment;
 import likelion.madi.domain.User;
 import likelion.madi.dto.request.KakaoNotificationConnectRequest;
 import likelion.madi.dto.request.KakaoNotificationRequest;
 import likelion.madi.dto.response.KakaoNotificationResponse;
 import likelion.madi.dto.response.KakaoTokenResponse;
+import likelion.madi.repository.CareCardRepository;
 import likelion.madi.repository.KakaoNotificationRepository;
 import likelion.madi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -23,7 +30,10 @@ import java.util.Optional;
 public class NotificationService {
     private final UserRepository userRepository;
     private final KakaoNotificationRepository kakaoNotificationRepository;
+    private final CareCardRepository careCardRepository;
     private final KakaoOAuthClient kakaoOAuthClient;
+    private final KakaoMessageClient kakaoMessageClient;
+    private final TodayCareService todayCareService;
 
     @Transactional
     public KakaoNotificationResponse connectKakaoNotification(Long userId, KakaoNotificationConnectRequest request) {
@@ -61,5 +71,39 @@ public class NotificationService {
 
         notification.updateConsent(request.getConsent());
         return KakaoNotificationResponse.from(notification);
+    }
+
+    @Transactional
+    public void sendKakaoMessage(Long userId, String city, String district) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        KakaoNotification notification = kakaoNotificationRepository.findByUser(user)
+                .filter(KakaoNotification::getConsent)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_KAKAO_NOTIFICATION));
+
+        CareCard activeCard = careCardRepository.findByUser(user).stream()
+                .filter(this::isInProgress)
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
+
+        CareCardTreatment primary = activeCard.getTreatments().get(0);
+        Treatment treatment = primary.getTreatment();
+        int dDay = (int) ChronoUnit.DAYS.between(activeCard.getTreatmentDate(), LocalDate.now());
+
+        String message = todayCareService.generateOrGetTodayCare(activeCard, treatment, dDay, city, district);
+
+        kakaoMessageClient.sendMessage(notification.getAccessToken(), message);
+    }
+
+    // 진행중인 카드인지 판단 (회복 총 기간을 넘지 않았는지)
+    private boolean isInProgress(CareCard card) {
+        CareCardTreatment primary = card.getTreatments().get(0);
+        Treatment treatment = primary.getTreatment();
+        if (treatment == null || treatment.getRecoveryTotalDays() == null) {
+            return true;
+        }
+        int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
+        return dDay <= treatment.getRecoveryTotalDays();
     }
 }
