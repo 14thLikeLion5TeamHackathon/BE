@@ -61,7 +61,9 @@ public class TodayCareService {
 
     private String generateAndCache(CareCard careCard, Treatment treatment, int dDay,
                                     String city, String district, LocalDate today) {
-        String fallback = "오늘의 케어 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요.";
+        String fallback = (treatment != null && treatment.getTodayCare() != null && !treatment.getTodayCare().isBlank())
+                ? treatment.getTodayCare()
+                : "오늘의 케어 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요.";
 
         try {
             String prompt = buildPrompt(careCard, treatment, dDay, city, district);
@@ -87,6 +89,10 @@ public class TodayCareService {
         StringBuilder sb = new StringBuilder();
         sb.append("시술명: ").append(treatment != null ? treatment.getName() : "미등록 시술").append("\n");
         sb.append("경과: D+").append(dDay).append("\n\n");
+
+        if (treatment != null && treatment.getTodayCare() != null && !treatment.getTodayCare().isBlank()) {
+            sb.append("기본 회복 가이드: ").append(treatment.getTodayCare()).append("\n\n");
+        }
 
         sb.append("오늘 날씨: ").append(weather.getWeatherCondition())
                 .append(", 기온 ").append(weather.getTemperature()).append("도")
