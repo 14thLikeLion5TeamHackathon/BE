@@ -15,7 +15,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,31 +32,56 @@ public class WeatherService {
     public WeatherResponseDto getWeather(Double lat, Double lon, String city, String district, LocalDate targetDate) {
         LocalDate date = (targetDate != null) ? targetDate : LocalDate.now();
 
-        // 💡 [방어 로직] 위도나 경도가 비어있거나, 둘 중 하나만 들어온 경우 서울 중구 좌표로 안전하게 대체합니다.
-        if (lat == null || lon == null || lat == 0.0 || lon == 0.0) {
-            if (city != null && district != null) {
+        Integer intLat = null;
+        Integer intLon = null;
+
+        if (lat != null && lon != null && Math.abs(lat) <= 90.0 && Math.abs(lon) <= 180.0) {
+            intLat = (int) Math.round(lat);
+            intLon = (int) Math.round(lon);
+        }
+
+        // 1. 지역명이 제공된 경우 (우선 탐색)
+        if (city != null && district != null) {
+            List<Weather> cachedWeatherList = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
+            if (!cachedWeatherList.isEmpty()) {
+                return new WeatherResponseDto(cachedWeatherList.get(0)); // 💡 중복 중 첫 번째 안전 반환
+            }
+
+            if (intLat == null || intLon == null) {
                 RegionMapper.Coordinate coord = RegionMapper.getCoordinate(city, district);
                 lat = coord.getLat();
                 lon = coord.getLon();
-            } else {
-                RegionMapper.Coordinate defaultCoord = RegionMapper.getCoordinate("서울특별시", "중구");
-                lat = defaultCoord.getLat();
-                lon = defaultCoord.getLon();
-            }
-        }
-
-        // 1. 지역명(시/도, 구/군)으로 조회하면서 유효한 좌표가 있는 경우 DB 캐시 확인
-        if (city != null && district != null) {
-            Optional<Weather> cachedWeather = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
-            if (cachedWeather.isPresent()) {
-                return new WeatherResponseDto(cachedWeather.get());
+                intLat = (int) Math.round(lat);
+                intLon = (int) Math.round(lon);
             }
 
-            return callOpenWeatherMapForecastApi(lat, lon, date, city, district, true);
+            return callOpenWeatherMapForecastApi(lat, lon, date, city, district, intLat, intLon, true);
         }
 
-        // 2. GPS (위도/경도) 모드 조회
-        return callOpenWeatherMapForecastApi(lat, lon, date, null, null, false);
+        // 2. 위경도(GPS)만 제공된 경우
+        if (intLat != null && intLon != null) {
+            List<Weather> cachedGpsWeatherList = weatherRepository.findByTargetDateAndLatitudeAndLongitude(date, intLat, intLon);
+            if (!cachedGpsWeatherList.isEmpty()) {
+                return new WeatherResponseDto(cachedGpsWeatherList.get(0)); // 💡 중복 중 첫 번째 안전 반환
+            }
+            return callOpenWeatherMapForecastApi(lat, lon, date, "GPS_USER", "lat_" + intLat + "_lon_" + intLon, intLat, intLon, true);
+        }
+
+        // 3. 둘 다 없는 경우 기본값 (서울 중구) 처리
+        city = "서울특별시";
+        district = "중구";
+        RegionMapper.Coordinate defaultCoord = RegionMapper.getCoordinate(city, district);
+        lat = defaultCoord.getLat();
+        lon = defaultCoord.getLon();
+        intLat = (int) Math.round(lat);
+        intLon = (int) Math.round(lon);
+
+        List<Weather> cachedDefaultList = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
+        if (!cachedDefaultList.isEmpty()) {
+            return new WeatherResponseDto(cachedDefaultList.get(0)); // 💡 중복 중 첫 번째 안전 반환
+        }
+
+        return callOpenWeatherMapForecastApi(lat, lon, date, city, district, intLat, intLon, true);
     }
 
     @Transactional
@@ -65,16 +90,18 @@ public class WeatherService {
         String targetCity = (city != null) ? city : "서울특별시";
         String targetDistrict = (district != null) ? district : "중구";
 
-        Optional<Weather> cachedWeather = weatherRepository.findByTargetDateAndCityAndDistrict(date, targetCity, targetDistrict);
-        if (cachedWeather.isPresent()) {
-            return new WeatherResponseDto(cachedWeather.get());
+        List<Weather> cachedWeatherList = weatherRepository.findByTargetDateAndCityAndDistrict(date, targetCity, targetDistrict);
+        if (!cachedWeatherList.isEmpty()) {
+            return new WeatherResponseDto(cachedWeatherList.get(0));
         }
 
         RegionMapper.Coordinate coord = RegionMapper.getCoordinate(targetCity, targetDistrict);
-        return callOpenWeatherMapForecastApi(coord.getLat(), coord.getLon(), date, targetCity, targetDistrict, true);
+        return callOpenWeatherMapForecastApi(coord.getLat(), coord.getLon(), date, targetCity, targetDistrict,
+                (int) Math.round(coord.getLat()), (int) Math.round(coord.getLon()), true);
     }
 
-    private WeatherResponseDto callOpenWeatherMapForecastApi(double lat, double lon, LocalDate targetDate, String city, String district, boolean shouldSaveDb) {
+    private WeatherResponseDto callOpenWeatherMapForecastApi(double lat, double lon, LocalDate targetDate,
+                                                             String city, String district, Integer intLat, Integer intLon, boolean shouldSaveDb) {
 
         URI uri = UriComponentsBuilder.fromUriString("https://api.openweathermap.org")
                 .path("/data/2.5/forecast")
@@ -87,13 +114,10 @@ public class WeatherService {
                 .build()
                 .toUri();
 
-        System.out.println("🌐 [실제 전송 Forecast API URL]: " + uri.toString());
-
         String jsonResponseStr;
         try {
             jsonResponseStr = restTemplate.getForObject(uri, String.class);
         } catch (Exception e) {
-            System.err.println("❌ 외부 예보 API 통신 실패 전문: " + e.getMessage());
             throw new RuntimeException("외부 예보 API 통신 실패: " + e.getMessage());
         }
 
@@ -101,8 +125,8 @@ public class WeatherService {
             throw new RuntimeException("외부 예보 API 응답 데이터가 비어 있습니다.");
         }
 
-        double tempVal = 25.0;
-        String weatherCondition = "맑음";
+        Double tempVal = null;
+        String weatherCondition = null;
 
         try {
             JsonNode rootNode = objectMapper.readTree(jsonResponseStr);
@@ -136,18 +160,26 @@ public class WeatherService {
             throw new RuntimeException("예보 JSON 파싱 오류: " + e.getMessage());
         }
 
-        String tempStr = String.valueOf(tempVal);
+        String finalTemp = (tempVal != null) ? String.valueOf(tempVal) : "25.0";
+        String finalCondition = (weatherCondition != null && !weatherCondition.isEmpty()) ? weatherCondition : "맑음";
+        String finalUvIndex = "보통";
 
-        if (shouldSaveDb && city != null && district != null) {
+        // 8월 여름철 미세먼지 랜덤 범위(15~45)
+        int finalPm10Value = (int) (Math.random() * 31) + 15;
+        String finalPm10Status = (finalPm10Value <= 30) ? "좋음" : "보통";
+
+        if (shouldSaveDb) {
             Weather newWeather = Weather.builder()
                     .targetDate(targetDate)
-                    .city(city)
-                    .district(district)
-                    .temperature(tempStr)
-                    .weatherCondition(weatherCondition)
-                    .pm10Status("보통")
-                    .pm10Value(40)
-                    .uvIndex("보통")
+                    .city(city != null ? city : "GPS_USER")
+                    .district(district != null ? district : "UNKNOWN")
+                    .latitude(intLat)
+                    .longitude(intLon)
+                    .temperature(finalTemp)
+                    .weatherCondition(finalCondition)
+                    .pm10Status(finalPm10Status)
+                    .pm10Value(finalPm10Value)
+                    .uvIndex(finalUvIndex)
                     .build();
 
             weatherRepository.save(newWeather);
@@ -158,10 +190,11 @@ public class WeatherService {
                 .targetDate(targetDate.toString())
                 .city(city)
                 .district(district)
-                .temperature(tempStr)
-                .weatherCondition(weatherCondition)
-                .uvIndex("보통")
-                .pm10Status("보통")
+                .temperature(finalTemp)
+                .weatherCondition(finalCondition)
+                .uvIndex(finalUvIndex)
+                .pm10Status(finalPm10Status)
+                .pm10Value(finalPm10Value)
                 .build();
     }
 }

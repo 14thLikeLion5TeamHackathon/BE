@@ -5,16 +5,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List; // 💡 List 임포트 추가
 
 @Repository
 public interface WeatherRepository extends JpaRepository<Weather, Long> {
 
-    // 1. 날짜, 시/도, 구/군 조건으로 특정 날씨 정보 조회
-    Optional<Weather> findByTargetDateAndCityAndDistrict(LocalDate targetDate, String city, String district);
+    // 💡 단건 조회 시 중복 데이터로 인한 예외를 막기 위해 List로 반환하도록 수정
+    List<Weather> findByTargetDateAndCityAndDistrict(LocalDate targetDate, String city, String district);
 
-    // 2. 🚨 지금 에러가 난 부분! 이 메서드가 반드시 있어야 합니다. (중복 체크용)
+    List<Weather> findByTargetDateAndLatitudeAndLongitude(LocalDate targetDate, Integer latitude, Integer longitude);
+
     boolean existsByTargetDateAndCityAndDistrict(LocalDate targetDate, String city, String district);
-
-    Optional<Weather> findByTargetDate(LocalDate targetDate);
 }
