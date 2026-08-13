@@ -51,4 +51,19 @@ public class MypageController {
                 )
         );
     }
+
+    @Operation(summary = "카카오 알림 연동 해제")
+    @DeleteMapping("/notification/kakao")
+    public ResponseEntity<ApiResponse<Void>> disconnectKakaoNotification(
+            @AuthenticationPrincipal Long userId
+    ) {
+        mypageService.disconnectKakaoNotification(userId);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessStatus.KAKAO_NOTIFICATION_DISCONNECT_SUCCESS.getStatusCode(),
+                        SuccessStatus.KAKAO_NOTIFICATION_DISCONNECT_SUCCESS.getMessage(),
+                        null
+                )
+        );
+    }
 }
