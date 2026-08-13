@@ -2,44 +2,48 @@ package likelion.madi.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import likelion.madi.domain.Weather;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class WeatherResponseDto {
 
-    @JsonProperty("target_date")
     private String targetDate;
-
     private String city;
-
     private String district;
-
     private String temperature;
-
-    @JsonProperty("weather_condition")
     private String weatherCondition;
+    private String uvIndex;
+    private String pm10Status;
 
-    @JsonProperty("uv_index")
-    private String uvIndex; // 👈 TodayCareService 호환용 추가
+    // 💡 누락되었던 미세먼지 정수 수치 필드 추가 (@JsonProperty로 스네이크 케이스 강제 매핑)
+    @JsonProperty("pm10_value")
+    private Integer pm10Value;
 
-    @JsonProperty("pm10_status")
-    private String pm10Status; // 👈 TodayCareService 호환용 추가
+    @Builder
+    public WeatherResponseDto(String targetDate, String city, String district, String temperature,
+                              String weatherCondition, String uvIndex, String pm10Status, Integer pm10Value) {
+        this.targetDate = targetDate;
+        this.city = city;
+        this.district = district;
+        this.temperature = temperature;
+        this.weatherCondition = weatherCondition;
+        this.uvIndex = uvIndex;
+        this.pm10Status = pm10Status;
+        this.pm10Value = pm10Value;
+    }
 
-    // Weather 엔티티 기반 변환 생성자
+    // Entity를 DTO로 변환하는 생성자
     public WeatherResponseDto(Weather weather) {
         this.targetDate = weather.getTargetDate() != null ? weather.getTargetDate().toString() : null;
         this.city = weather.getCity();
         this.district = weather.getDistrict();
-        this.temperature = weather.getTemperature() != null ? String.valueOf(weather.getTemperature()) : null;
+        this.temperature = weather.getTemperature();
         this.weatherCondition = weather.getWeatherCondition();
-        // Weather 엔티티에 해당 필드가 있다면 꺼내오고, 없으면 기본값 설정
-        this.uvIndex = "보통";
-        this.pm10Status = "보통";
+        this.uvIndex = weather.getUvIndex();
+        this.pm10Status = weather.getPm10Status();
+        this.pm10Value = weather.getPm10Value() != null ? weather.getPm10Value() : 40; // null 방어 기본값
     }
 }

@@ -9,51 +9,42 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "weather", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"target_date", "city", "district"})
-})
+@Table(name = "weather")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Weather {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long weatherId;
 
-    @Column(name = "target_date", nullable = false)
     private LocalDate targetDate;
 
-    @Column(nullable = false)
     private String city;
-
-    @Column(nullable = false)
     private String district;
 
-    @Column(nullable = false)
+    // 💡 정수형 위도 및 경도 캐싱 컬럼
+    private Integer latitude;
+    private Integer longitude;
+
     private String temperature;
-
-    @Column(name = "weather_condition", nullable = false)
     private String weatherCondition;
-
-    @Column(name = "uv_index", nullable = false)
     private String uvIndex;
-
-    @Column(name = "pm10_value", nullable = false)
+    private String pm10Status;
     private Integer pm10Value;
 
-    @Column(name = "pm10_status", nullable = false)
-    private String pm10Status;
-
     @Builder
-    public Weather(LocalDate targetDate, String city, String district, String temperature,
-                   String weatherCondition, String uvIndex, Integer pm10Value, String pm10Status) {
+    public Weather(LocalDate targetDate, String city, String district, Integer latitude, Integer longitude,
+                   String temperature, String weatherCondition, String uvIndex, String pm10Status, Integer pm10Value) {
         this.targetDate = targetDate;
         this.city = city;
         this.district = district;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.temperature = temperature;
         this.weatherCondition = weatherCondition;
         this.uvIndex = uvIndex;
-        this.pm10Value = pm10Value;
         this.pm10Status = pm10Status;
+        this.pm10Value = pm10Value;
     }
 }
