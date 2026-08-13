@@ -36,15 +36,20 @@ public class Treatment {
     @Column(name = "recovery_transition_day")
     private Integer recoveryTransitionDay;
 
+    @Lob
+    @Column(name = "today_care", columnDefinition = "TEXT")
+    private String todayCare;
+
     @Builder
     public Treatment(String name, String category, String description, AacStore store,
-                     Integer recoveryTotalDays, Integer recoveryTransitionDay) {
+                     Integer recoveryTotalDays, Integer recoveryTransitionDay, String todayCare) {
         this.name = name;
         this.category = category;
         this.description = description;
         this.store = store;
         this.recoveryTotalDays = recoveryTotalDays;
         this.recoveryTransitionDay = recoveryTransitionDay;
+        this.todayCare = todayCare;
     }
 
 }

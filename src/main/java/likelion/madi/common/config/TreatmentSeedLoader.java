@@ -52,7 +52,7 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                 if (cols.size() < 10) {
                     continue;
                 }
-                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명, 매장URL, 매장위도, 매장경도
+                // 컬럼 순서: 매장, 매장위치, 카테고리, 세부내용, 시술 설명, 매장URL, 매장위도, 매장경도, recovery_total_days, recovery_transition_day, 오늘의 케어
                 String storeName = cols.get(0);
                 String storeLocation = cols.get(1);
                 String category = cols.get(2);
@@ -65,6 +65,7 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                 String recoveryTransitionDayStr = cols.get(9);
                 Integer recoveryTotalDays = recoveryTotalDaysStr.isBlank() ? null : Integer.parseInt(recoveryTotalDaysStr.trim());
                 Integer recoveryTransitionDay = recoveryTransitionDayStr.isBlank() ? null : Integer.parseInt(recoveryTransitionDayStr.trim());
+                String todayCare = cols.size() > 10 ? cols.get(10) : null;
 
                 AacStore store = resolveStore(storeCache, storeName, storeLocation, storeUrl, storeLatitude, storeLongitude);
 
@@ -75,6 +76,7 @@ public class TreatmentSeedLoader implements CommandLineRunner {
                         .store(store)
                         .recoveryTotalDays(recoveryTotalDays)
                         .recoveryTransitionDay(recoveryTransitionDay)
+                        .todayCare(todayCare)
                         .build());
             }
         }
