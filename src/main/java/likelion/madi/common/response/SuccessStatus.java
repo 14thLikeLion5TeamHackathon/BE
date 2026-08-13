@@ -42,6 +42,7 @@ public enum SuccessStatus {
     RECOVERY_TIMELINE_GET_SUCCESS(HttpStatus.OK, "회복 타임라인 조회 성공"),
 
     KAKAO_MESSAGE_SEND_SUCCESS(HttpStatus.OK, "카카오 알림 메시지 발송 성공"),
+    BRIEFING_GET_SUCCESS(HttpStatus.OK, "관리 행동 브리핑 조회 성공"),
 
     /// 201 CREATED
     AUTH_SIGNUP_SUCCESS(HttpStatus.CREATED, "회원가입 성공"),
