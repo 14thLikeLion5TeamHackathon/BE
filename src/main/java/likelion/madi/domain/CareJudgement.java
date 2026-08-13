@@ -44,7 +44,7 @@ public class CareJudgement {
     private LocalDate judgedDate;
 
     @Lob
-    @Column(name = "action_sentence")
+    @Column(name = "action_sentence", columnDefinition = "TEXT")
     private String actionSentence;
 
     @Enumerated(EnumType.STRING)
@@ -52,7 +52,7 @@ public class CareJudgement {
     private CautionLevel cautionLevel;
 
     @Lob
-    @Column(name = "reasons")
+    @Column(name = "reasons", columnDefinition = "TEXT")
     private String reasons;
 
     @Column(name = "created_at", updatable = false)

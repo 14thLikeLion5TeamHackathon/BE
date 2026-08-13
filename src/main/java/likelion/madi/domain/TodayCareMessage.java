@@ -30,7 +30,7 @@ public class TodayCareMessage {
     private LocalDate targetDate;
 
     @Lob
-    @Column(name = "generated_text")
+    @Column(name = "generated_text", columnDefinition = "TEXT")
     private String generatedText;
 
     @Column(name = "created_at", updatable = false)

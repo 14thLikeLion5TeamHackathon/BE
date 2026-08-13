@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import likelion.madi.dto.response.CareRecordTimelineResponse;
@@ -56,6 +57,7 @@ public class CareRecordService {
 
         String photoUrl = noPhoto ? null : fileStorageService.store(photo);
         List<CareRecordTagEntry> tagEntries = parseTags(tagsJson);
+        validateAllTagsPresent(tagEntries);
 
         int dDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), LocalDate.now());
 
@@ -96,6 +98,20 @@ public class CareRecordService {
         }
 
         return tagEntries;
+    }
+
+    private void validateAllTagsPresent(List<CareRecordTagEntry> tagEntries) {
+        Set<Long> requiredTagIds = statusTagRepository.findAll().stream()
+                .map(StatusTag::getTagId)
+                .collect(Collectors.toSet());
+
+        Set<Long> submittedTagIds = tagEntries.stream()
+                .map(CareRecordTagEntry::getTagId)
+                .collect(Collectors.toSet());
+
+        if (!submittedTagIds.containsAll(requiredTagIds)) {
+            throw new BadRequestException(ErrorStatus.BAD_REQUEST_SYMPTOM_TAGS_REQUIRED);
+        }
     }
 
     // 상태 태그 관련 서비스

@@ -40,7 +40,7 @@ public class CareRecord {
     private String photoUrl;
 
     @Lob
-    @Column(name = "status_description")
+    @Column(name = "status_description", columnDefinition = "TEXT")
     private String statusDescription;
 
     @Column(name = "d_day")
