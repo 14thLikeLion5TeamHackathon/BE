@@ -19,6 +19,7 @@ public enum ErrorStatus {
     BAD_REQUEST_NOT_SUPPORTED_MEDIA_TYPE(HttpStatus.BAD_REQUEST, "NOT_SUPPORTED_MEDIA_TYPE", "지원하지 않는 미디어 타입입니다."),
     BAD_REQUEST_INVALID_IMAGE_SIZE(HttpStatus.BAD_REQUEST, "INVALID_IMAGE_SIZE", "이미지 파일 크기가 15MB 보다 큽니다."),
     BAD_REQUEST_INVALID_ONBOARDING_INPUT(HttpStatus.BAD_REQUEST, "INVALID_ONBOARDING_INPUT", "필수 입력 항목이 누락되었거나 필수 약관 동의가 필요합니다." ),
+    BAD_REQUEST_SYMPTOM_TAGS_REQUIRED(HttpStatus.BAD_REQUEST, "SYMPTOM_TAGS_REQUIRED", "모든 증상 태그를 입력해야 합니다."),
 
     /// 401 UNAUTHORIZED
     UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED_USER", "인증되지 않은 사용자입니다."),
@@ -51,9 +52,13 @@ public enum ErrorStatus {
     CONFLICT_LAST_LOGIN_METHOD(HttpStatus.CONFLICT, "LAST_LOGIN_METHOD", "마지막으로 남은 로그인 수단은 연동 해제할 수 없습니다."),
     CONFLICT_ALREADY_CONNECTED(HttpStatus.CONFLICT, "ALREADY_CONNECTED", "이미 연동되어 있습니다."),
     CONFLICT_ALREADY_ONBOARDED_USER(HttpStatus.CONFLICT, "ALREADY_ONBOARDED_USER", "이미 온보딩 정보 등록이 완료된 사용자입니다."),
+    CONFLICT_FEEDBACK_ALREADY_EXISTS(HttpStatus.CONFLICT, "FEEDBACK_ALREADY_EXISTS", "해당 기록에 대한 AI 피드백이 이미 존재합니다."),
 
     /// 415 UNSUPPORTED MEDIA TYPE
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.BAD_REQUEST, "UNSUPPORTED_MEDIA_TYPE", "지원하지 않는 Content-Type 입니다."),
+
+    /// 429 TOO MANY REQUESTS
+    TOO_MANY_REQUESTS_FEEDBACK_QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "FEEDBACK_QUOTA_EXCEEDED", "오늘 분석 횟수를 모두 사용했어요. (일 3회 제한)"),
 
     /// 500 SERVER ERROR
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다."),
@@ -62,6 +67,9 @@ public enum ErrorStatus {
 
     /// 503 SERVICE UNAVAILABLE
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", "서버에 연결할 수 없습니다."),
+
+    /// 504 GATEWAY TIMEOUT
+    GATEWAY_TIMEOUT_AI_ANALYSIS(HttpStatus.GATEWAY_TIMEOUT, "AI_ANALYSIS_TIMEOUT", "AI 분석 서버의 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요."),
 
     ;
 

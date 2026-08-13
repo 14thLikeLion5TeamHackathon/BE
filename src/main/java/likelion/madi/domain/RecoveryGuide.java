@@ -37,15 +37,15 @@ public class RecoveryGuide {
     private Integer dDayMax;
 
     @Lob
-    @Column(name = "care_guidance")
+    @Column(name = "care_guidance", columnDefinition = "TEXT")
     private String careGuidance;
 
     @Lob
-    @Column(name = "today_care")
+    @Column(name = "today_care", columnDefinition = "TEXT")
     private String todayCare;
 
     @Lob
-    @Column(name = "caution")
+    @Column(name = "caution", columnDefinition = "TEXT")
     private String caution;
 
     @Builder
