@@ -9,6 +9,7 @@ application.yml
 application.yaml
 .application.yml
 .application.yaml
+.env
 .omc
 omc
 .idea/
