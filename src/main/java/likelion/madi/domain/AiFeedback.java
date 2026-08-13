@@ -33,25 +33,56 @@ public class AiFeedback {
     private CareRecord careRecord;
 
     @Lob
-    @Column(name = "change_summary")
+    @Column(name = "change_summary", columnDefinition = "TEXT")
     private String changeSummary;
 
     @Lob
-    @Column(name = "care_guidance")
+    @Column(name = "care_guidance", columnDefinition = "TEXT")
     private String careGuidance;
+
+    @Lob
+    @Column(name = "comparison", columnDefinition = "TEXT")
+    private String comparison;
+
+    @Lob
+    @Column(name = "analysis_tags", columnDefinition = "TEXT")
+    private String analysisTags;
+
+    @Lob
+    @Column(name = "intensity_review", columnDefinition = "TEXT")
+    private String intensityReview;
+
+    @Lob
+    @Column(name = "today_care", columnDefinition = "TEXT")
+    private String todayCare;
 
     @Column(name = "needs_consultation")
     private Boolean needsConsultation;
 
+    @Lob
+    @Column(name = "consultation_message", columnDefinition = "TEXT")
+    private String consultationMessage;
+
+    @Lob
+    @Column(name = "consultation_criteria", columnDefinition = "TEXT")
+    private String consultationCriteria;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
     @Builder
-    public AiFeedback(CareRecord careRecord, String changeSummary, String careGuidance, Boolean needsConsultation) {
+    public AiFeedback(CareRecord careRecord, String changeSummary, String careGuidance, String comparison,
+                      String analysisTags, String intensityReview, String todayCare, Boolean needsConsultation,
+                      String consultationMessage, String consultationCriteria) {
         this.careRecord = careRecord;
         this.changeSummary = changeSummary;
         this.careGuidance = careGuidance;
+        this.comparison = comparison;
+        this.analysisTags = analysisTags;
+        this.intensityReview = intensityReview;
+        this.todayCare = todayCare;
         this.needsConsultation = needsConsultation;
+        this.consultationMessage = consultationMessage;
+        this.consultationCriteria = consultationCriteria;
         this.createdAt = LocalDateTime.now();
     }
 }
