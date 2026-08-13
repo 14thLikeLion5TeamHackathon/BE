@@ -15,4 +15,6 @@ public interface WeatherRepository extends JpaRepository<Weather, Long> {
 
     // 2. 🚨 지금 에러가 난 부분! 이 메서드가 반드시 있어야 합니다. (중복 체크용)
     boolean existsByTargetDateAndCityAndDistrict(LocalDate targetDate, String city, String district);
+
+    Optional<Weather> findByTargetDate(LocalDate targetDate);
 }
