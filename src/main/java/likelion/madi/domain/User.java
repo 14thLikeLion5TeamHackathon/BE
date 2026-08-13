@@ -75,4 +75,10 @@ public class User {
     public void updateRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;
     }
+
+    public void updatePartial(String name, LocalDate birthDate, String gender) {
+        if (name != null) this.name = name;
+        if (birthDate != null) this.birthDate = birthDate;
+        if (gender != null) this.gender = gender;
+    }
 }
