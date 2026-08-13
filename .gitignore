@@ -16,6 +16,7 @@ omc
 .vscode/
 .DS_Store
 out/
+uploads/
 
 ### STS ###
 .apt_generated
