@@ -3,6 +3,7 @@ package likelion.madi.common.security;
 import java.io.IOException;
 import java.util.List;
 
+import likelion.madi.repository.BlacklistedTokenRepository;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +26,7 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
     private static final String HEADER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final BlacklistedTokenRepository blacklistedTokenRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -34,8 +36,13 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
 
         if (token != null) {
             try {
-                Long userId = jwtService.extractUserId(token);
-                setAuthentication(userId);
+                String tokenId = jwtService.extractTokenId(token);
+                if (blacklistedTokenRepository.existsByTokenId(tokenId)) {
+                    request.setAttribute("exception", ErrorStatus.UNAUTHORIZED_INVALID_TOKEN);
+                } else {
+                    Long userId = jwtService.extractUserId(token);
+                    setAuthentication(userId);
+                }
             } catch (ExpiredJwtException e) {
                 request.setAttribute("exception", ErrorStatus.UNAUTHORIZED_TOKEN_EXPIRED);
             } catch (JwtException | IllegalArgumentException e) {

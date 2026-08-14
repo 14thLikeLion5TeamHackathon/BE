@@ -14,6 +14,8 @@ public interface CareRecordRepository extends JpaRepository<CareRecord, Long> {
 
     List<CareRecord> findByCareCardOrderByRecordedAtAsc(CareCard careCard);
 
+    Optional<CareRecord> findTopByCareCardOrderByRecordedAtDesc(CareCard careCard);
+
     Optional<CareRecord> findFirstByCareCardAndRecordedAtBeforeOrderByRecordedAtDesc(
             CareCard careCard, LocalDateTime recordedAt);
 }
