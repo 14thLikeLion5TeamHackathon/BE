@@ -8,11 +8,8 @@ import likelion.madi.domain.*;
 import likelion.madi.dto.request.CareCardCreateRequest;
 import likelion.madi.dto.response.CareCardCreateResponse;
 import likelion.madi.dto.response.CareCardDetailResponse;
-import likelion.madi.repository.AiFeedbackRepository;
-import likelion.madi.repository.CareCardRepository;
-import likelion.madi.repository.RecoveryGuideRepository;
-import likelion.madi.repository.TreatmentRepository;
-import likelion.madi.repository.UserRepository;
+import likelion.madi.dto.response.CareCardListResponse;
+import likelion.madi.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,8 +19,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -38,6 +38,7 @@ public class CareCardService {
     private final RecoveryGuideRepository recoveryGuideRepository;
     private final AiFeedbackRepository aiFeedbackRepository;
     private final TodayCareService todayCareService;
+    private final CareRecordRepository careRecordRepository;
 
     // 카드 생성
     public CareCardCreateResponse create(Long userId, CareCardCreateRequest request) {
@@ -150,5 +151,61 @@ public class CareCardService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+    }
+
+    // 케어카드 목록 조회 (카드별 최근 기록 포함)
+    @Transactional(readOnly = true)
+    public List<CareCardListResponse> getMyCareCards(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        List<CareCard> careCards = careCardRepository.findByUser(user);
+        List<CareCardListResponse> result = new ArrayList<>();
+
+        for (CareCard careCard : careCards) {
+            CareCardTreatment primary = careCard.getTreatments().get(0);
+            Treatment treatment = primary.getTreatment();
+            int cardDDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), LocalDate.now());
+
+            String treatmentName = treatment != null ? treatment.getName() : primary.getCustomName();
+            Integer recoveryTotalDays = treatment != null ? treatment.getRecoveryTotalDays() : null;
+            String cardStatus = (recoveryTotalDays != null && cardDDay >= recoveryTotalDays) ? "completed" : "active";
+
+            CareCardListResponse.CareCardListResponseBuilder builder = CareCardListResponse.builder()
+                    .cardId(careCard.getCardId())
+                    .treatmentName(treatmentName)
+                    .treatmentDate(careCard.getTreatmentDate())
+                    .status(cardStatus)
+                    .recoveryTotalDays(recoveryTotalDays);
+
+            careRecordRepository.findTopByCareCardOrderByRecordedAtDesc(careCard).ifPresent(record -> {
+                Map<String, Integer> intensityByTag = record.getTags().stream()
+                        .collect(Collectors.toMap(t -> t.getStatusTag().getName(), CareRecordTag::getIntensity));
+
+                CareCardListResponse.AiFeedbackItem aiFeedbackItem = aiFeedbackRepository.findByCareRecord(record)
+                        .map(f -> CareCardListResponse.AiFeedbackItem.builder()
+                                .feedbackId(f.getFeedbackId())
+                                .changeSummary(f.getChangeSummary())
+                                .careGuidance(f.getCareGuidance())
+                                .needsConsultation(f.getNeedsConsultation())
+                                .build())
+                        .orElse(null);
+
+                builder.recordId(record.getRecordId())
+                        .recordedAt(record.getRecordedAt().toLocalDate())
+                        .dDay(record.getDDay())
+                        .photoUrl(record.getPhotoUrl())
+                        .statusDescription(record.getStatusDescription())
+                        .redness(intensityByTag.get("붉은기"))
+                        .swelling(intensityByTag.get("부기"))
+                        .pain(intensityByTag.get("통증"))
+                        .dryness(intensityByTag.get("건조함"))
+                        .aiFeedback(aiFeedbackItem);
+            });
+
+            result.add(builder.build());
+        }
+
+        return result;
     }
 }

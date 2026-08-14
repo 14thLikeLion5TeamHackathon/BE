@@ -87,6 +87,9 @@ public class MypageService {
         });
 
         userRepository.delete(user);
+    }
+
+    @Transactional
     public void logout(Long userId, String accessToken) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
