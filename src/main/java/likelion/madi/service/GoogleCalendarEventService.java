@@ -7,20 +7,22 @@ import likelion.madi.repository.GoogleCalendarConnectionRepository;
 import likelion.madi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,36 +36,52 @@ public class GoogleCalendarEventService {
     private final GoogleCalendarConnectionRepository calendarRepository;
     private final RestTemplate restTemplate;
 
-    @Transactional(readOnly = true)
+    @Value("${spring.security.oauth2.client.registration.google.client-id:}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret:}")
+    private String clientSecret;
+
+    @Transactional
     public GoogleCalendarEventsResponseDto getCalendarEvents(Long userId, String startDateStr, String endDateStr) {
         // 1. 유저 존재 확인
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다. ID: " + userId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다. ID: " + userId));
 
-        // 2. 구글 캘린더 연동 상태 및 토큰 확인
+        // 2. 구글 캘린더 연동 여부 확인 (3번 해결: 500 대신 404 NOT_FOUND 반환)
         GoogleCalendarConnection connection = calendarRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalStateException("연동된 구글 캘린더 정보가 없습니다. 먼저 캘린더를 연동해주세요."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연동된 구글 캘린더 정보가 없습니다. 먼저 캘린더를 연동해주세요."));
 
-        // 3. 날짜 기본값 처리 (미입력 시 이번 달 1일 ~ 이번 달 말일)
+        // 연동 해제 상태 체크 (토큰이 비어있는 경우 400 Bad Request)
+        if (connection.getAccessToken() == null || connection.getAccessToken().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "구글 캘린더 연동이 해제된 상태입니다. 다시 연동해주세요.");
+        }
+
+        // 3. 날짜 파싱 및 검증 (날짜 역전 체크)
         LocalDate startDate;
         LocalDate endDate;
 
-        if (startDateStr == null || startDateStr.isBlank()) {
-            startDate = LocalDate.now().withDayOfMonth(1);
-        } else {
-            startDate = LocalDate.parse(startDateStr);
+        try {
+            startDate = (startDateStr == null || startDateStr.isBlank())
+                    ? LocalDate.now().withDayOfMonth(1)
+                    : LocalDate.parse(startDateStr);
+
+            endDate = (endDateStr == null || endDateStr.isBlank())
+                    ? YearMonth.now().atEndOfMonth()
+                    : LocalDate.parse(endDateStr);
+        } catch (DateTimeParseException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않습니다. (YYYY-MM-DD 권장)");
         }
 
-        if (endDateStr == null || endDateStr.isBlank()) {
-            endDate = YearMonth.now().atEndOfMonth();
-        } else {
-            endDate = LocalDate.parse(endDateStr);
+        // ⭐ startDate가 endDate보다 늦은 경우 400 에러 처리
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "시작 날짜(startDate)는 종료 날짜(endDate)보다 늦을 수 없습니다.");
         }
 
         log.info("Google Calendar Fetch Range: {} ~ {}", startDate, endDate);
 
-        // 4. 구글 API를 호출하여 실제 일정 받아오기
-        List<GoogleCalendarEventsResponseDto.ScheduleItem> scheduleItems = fetchGoogleEvents(connection.getAccessToken(), startDate, endDate);
+        // 4. 구글 API 호출 (1번 해결: 만료 시 RefreshToken 자동 갱신 적용)
+        List<GoogleCalendarEventsResponseDto.ScheduleItem> scheduleItems = fetchGoogleEventsWithAutoRefresh(connection, startDate, endDate);
 
         return GoogleCalendarEventsResponseDto.builder()
                 .userId(userId)
@@ -72,79 +90,131 @@ public class GoogleCalendarEventService {
     }
 
     /**
-     * Google Calendar v3 API 실제 호출 및 일정 매핑
+     * 일정 조회 및 토큰 만료 시 RefreshToken 자동 갱신 로직
      */
-    private List<GoogleCalendarEventsResponseDto.ScheduleItem> fetchGoogleEvents(String accessToken, LocalDate start, LocalDate end) {
-        List<GoogleCalendarEventsResponseDto.ScheduleItem> items = new ArrayList<>();
+    private List<GoogleCalendarEventsResponseDto.ScheduleItem> fetchGoogleEventsWithAutoRefresh(
+            GoogleCalendarConnection connection, LocalDate start, LocalDate end) {
 
         try {
-            // 구글 캘린더가 100% 인식하는 ISO 8601 UTC 'Z' 포맷으로 변환 (400 Bad Request 에러 해결)
-            String timeMin = start.atStartOfDay(ZoneId.of("Asia/Seoul"))
-                    .withZoneSameInstant(ZoneId.of("UTC"))
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+            return requestGoogleCalendarEvents(connection.getAccessToken(), start, end);
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.warn("구글 AccessToken 만료 감지(401). RefreshToken으로 재발급을 시도합니다.");
 
-            String timeMax = end.atTime(23, 59, 59).atZone(ZoneId.of("Asia/Seoul"))
-                    .withZoneSameInstant(ZoneId.of("UTC"))
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+            if (connection.getRefreshToken() == null || connection.getRefreshToken().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "구글 연동 토큰이 만료되었습니다. 다시 연동해주세요.");
+            }
 
-            // URL 생성 (queryParam을 구글 권장 규격으로 빌드)
-            String url = UriComponentsBuilder.fromUriString("https://www.googleapis.com/calendar/v3/calendars/primary/events")
-                    .queryParam("timeMin", timeMin)
-                    .queryParam("timeMax", timeMax)
-                    .queryParam("singleEvents", true)
-                    .queryParam("orderBy", "startTime")
-                    .build()
-                    .toUriString();
+            // 구글 서버에 refresh_token을 보내 새로운 access_token 획득
+            String newAccessToken = refreshGoogleAccessToken(connection.getRefreshToken());
 
-            log.info("Request Google Calendar API URL: {}", url);
+            // 엔티티 업데이트 (Dirty Checking을 통해 DB에 반영)
+            connection.updateTokens(newAccessToken, connection.getRefreshToken());
+            calendarRepository.save(connection);
 
-            // HTTP 헤더 설정 (Authorization: Bearer <AccessToken>)
+            // 갱신된 토큰으로 재호출
+            return requestGoogleCalendarEvents(newAccessToken, start, end);
+        } catch (ResponseStatusException rse) {
+            throw rse;
+        } catch (Exception e) {
+            log.error("Google Calendar API 호출 실패: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "구글 캘린더 일정을 가져오는 중 오류가 발생했습니다.");
+        }
+    }
+
+    /**
+     * 구글 OAuth 서버에 RefreshToken을 전달하여 새로운 AccessToken을 발급받는 메서드
+     */
+    private String refreshGoogleAccessToken(String refreshToken) {
+        try {
+            String tokenUrl = "https://oauth2.googleapis.com/token";
+
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(accessToken);
-            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-            // API 호출
-            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("client_id", clientId);
+            params.add("client_secret", clientSecret);
+            params.add("refresh_token", refreshToken);
+            params.add("grant_type", "refresh_token");
 
-            if (response.getBody() != null && response.getBody().containsKey("items")) {
-                List<Map<String, Object>> rawEvents = (List<Map<String, Object>>) response.getBody().get("items");
-                long scheduleId = 1L;
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+            ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
 
-                for (Map<String, Object> event : rawEvents) {
-                    String title = (String) event.getOrDefault("summary", "(제목 없음)");
-                    String location = (String) event.getOrDefault("location", "");
+            if (response.getBody() != null && response.getBody().containsKey("access_token")) {
+                return (String) response.getBody().get("access_token");
+            }
 
-                    // 시작 시간 파싱
-                    Map<String, Object> startMap = (Map<String, Object>) event.get("start");
-                    String eventDate = "";
-                    String eventTime = "00:00:00";
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "새로운 Access Token 발급에 실패했습니다.");
+        } catch (Exception e) {
+            log.error("Google Token Refresh 실패: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "구글 인증이 만료되었습니다. 다시 연동해주세요.");
+        }
+    }
 
-                    if (startMap != null) {
-                        if (startMap.containsKey("dateTime")) { // 특정 시간 일정
-                            String dateTimeStr = (String) startMap.get("dateTime"); // 예: 2026-08-15T14:00:00+09:00
+    /**
+     * Google Calendar v3 API 실제 HTTP 요청 및 매핑
+     */
+    private List<GoogleCalendarEventsResponseDto.ScheduleItem> requestGoogleCalendarEvents(String accessToken, LocalDate start, LocalDate end) {
+        List<GoogleCalendarEventsResponseDto.ScheduleItem> items = new ArrayList<>();
+
+        String timeMin = start.atStartOfDay(ZoneId.of("Asia/Seoul"))
+                .withZoneSameInstant(ZoneId.of("UTC"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+
+        String timeMax = end.atTime(23, 59, 59).atZone(ZoneId.of("Asia/Seoul"))
+                .withZoneSameInstant(ZoneId.of("UTC"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+
+        String url = UriComponentsBuilder.fromUriString("https://www.googleapis.com/calendar/v3/calendars/primary/events")
+                .queryParam("timeMin", timeMin)
+                .queryParam("timeMax", timeMax)
+                .queryParam("singleEvents", true)
+                .queryParam("orderBy", "startTime")
+                .build()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+
+        if (response.getBody() != null && response.getBody().containsKey("items")) {
+            List<Map<String, Object>> rawEvents = (List<Map<String, Object>>) response.getBody().get("items");
+            long scheduleId = 1L;
+
+            for (Map<String, Object> event : rawEvents) {
+                String title = (String) event.getOrDefault("summary", "(제목 없음)");
+                String location = (String) event.getOrDefault("location", "");
+
+                Map<String, Object> startMap = (Map<String, Object>) event.get("start");
+                String eventDate = "";
+                String eventTime = "00:00:00";
+
+                if (startMap != null) {
+                    if (startMap.containsKey("dateTime")) {
+                        String dateTimeStr = (String) startMap.get("dateTime");
+                        if (dateTimeStr.length() >= 19) {
                             eventDate = dateTimeStr.substring(0, 10);
                             eventTime = dateTimeStr.substring(11, 19);
-                        } else if (startMap.containsKey("date")) { // 하루 종일 일정
-                            eventDate = (String) startMap.get("date"); // 예: 2026-08-15
-                            eventTime = "00:00:00";
                         }
+                    } else if (startMap.containsKey("date")) {
+                        eventDate = (String) startMap.get("date");
+                        eventTime = "00:00:00";
                     }
-
-                    items.add(GoogleCalendarEventsResponseDto.ScheduleItem.builder()
-                            .scheduleId(scheduleId++)
-                            .title(title)
-                            .eventDate(eventDate)
-                            .eventTime(eventTime)
-                            .location(location)
-                            .source("google")
-                            .latitude("")
-                            .longitude("")
-                            .build());
                 }
+
+                items.add(GoogleCalendarEventsResponseDto.ScheduleItem.builder()
+                        .scheduleId(scheduleId++)
+                        .title(title)
+                        .eventDate(eventDate)
+                        .eventTime(eventTime)
+                        .location(location)
+                        .source("google")
+                        .latitude("")
+                        .longitude("")
+                        .build());
             }
-        } catch (Exception e) {
-            log.error("Google Calendar API 호출 중 에러 발생: {}", e.getMessage());
-            throw new IllegalStateException("구글 캘린더 연동 정보가 만료되었거나 일정을 가져올 수 없습니다.");
         }
 
         return items;
