@@ -41,6 +41,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .id(java.util.UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
@@ -56,5 +57,23 @@ public class JwtService {
                         .getPayload()
                         .getSubject()
         );
+    }
+
+    public String extractTokenId(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getId();
+    }
+
+    public java.util.Date extractExpiration(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getExpiration();
     }
 }
