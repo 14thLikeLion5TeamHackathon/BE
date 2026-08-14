@@ -94,7 +94,13 @@ public class NotificationService {
 
         String message = todayCareService.generateOrGetTodayCare(activeCard, treatment, dDay, city, district);
 
-        kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
+        try {
+            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
+        } catch (Exception e) {
+            KakaoTokenResponse refreshed = kakaoOAuthClient.refreshAccessToken(notification.getRefreshToken());
+            notification.updateTokens(refreshed.getAccessToken(), refreshed.getRefreshToken());
+            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
+        }
     }
 
     @Transactional
@@ -102,22 +108,32 @@ public class NotificationService {
         List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
 
         for (KakaoNotification notification : notifications) {
-            User user = notification.getUser();
-            List<CareCard> cards = careCardRepository.findByUser(user);
+            try {
+                User user = notification.getUser();
+                List<CareCard> cards = careCardRepository.findByUser(user);
 
-            for (CareCard card : cards) {
-                int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
-                if (dDay == 3 || dDay == 7) {
-                    CareCardTreatment primary = card.getTreatments().get(0);
-                    String treatmentName = primary.getTreatment() != null
-                            ? primary.getTreatment().getName()
-                            : primary.getCustomName();
+                for (CareCard card : cards) {
+                    int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
+                    if (dDay == 3 || dDay == 7) {
+                        CareCardTreatment primary = card.getTreatments().get(0);
+                        String treatmentName = primary.getTreatment() != null
+                                ? primary.getTreatment().getName()
+                                : primary.getCustomName();
 
-                    String message = treatmentName + " 받은 지 " + dDay + "일차예요! 오늘 상태를 기록해보세요.";
-                    String link = "http://localhost:3000/record/" + card.getCardId();
+                        String message = treatmentName + " 받은 지 " + dDay + "일차예요! 오늘 상태를 기록해보세요.";
+                        String link = "http://localhost:3000/record/" + card.getCardId();
 
-                    kakaoMessageClient.sendMessage(notification.getAccessToken(), message, link);
+                        try {
+                            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, link);
+                        } catch (Exception e) {
+                            KakaoTokenResponse refreshed = kakaoOAuthClient.refreshAccessToken(notification.getRefreshToken());
+                            notification.updateTokens(refreshed.getAccessToken(), refreshed.getRefreshToken());
+                            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, link);
+                        }
+                    }
                 }
+            } catch (Exception e) {
+                log.warn("기록 리마인드 발송 실패 - userId: {}, error: {}", notification.getUser().getUserId(), e.getMessage());
             }
         }
     }
@@ -138,17 +154,32 @@ public class NotificationService {
         List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
 
         for (KakaoNotification notification : notifications) {
-            User user = notification.getUser();
+            try {
+                User user = notification.getUser();
 
-            Optional<String> warning = riskWarningService.checkTomorrowRisk(user);
+                Optional<String> warning = riskWarningService.checkTomorrowRisk(user);
 
-            if (warning.isPresent()) {
-                kakaoMessageClient.sendMessage(
-                        notification.getAccessToken(),
-                        warning.get(),
-                        "http://localhost:3000",
-                        "일정 확인하기"
-                );
+                if (warning.isPresent()) {
+                    try {
+                        kakaoMessageClient.sendMessage(
+                                notification.getAccessToken(),
+                                warning.get(),
+                                "http://localhost:3000",
+                                "일정 확인하기"
+                        );
+                    } catch (Exception e) {
+                        KakaoTokenResponse refreshed = kakaoOAuthClient.refreshAccessToken(notification.getRefreshToken());
+                        notification.updateTokens(refreshed.getAccessToken(), refreshed.getRefreshToken());
+                        kakaoMessageClient.sendMessage(
+                                notification.getAccessToken(),
+                                warning.get(),
+                                "http://localhost:3000",
+                                "일정 확인하기"
+                        );
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("위험 알림 발송 실패 - userId: {}, error: {}", notification.getUser().getUserId(), e.getMessage());
             }
         }
     }
