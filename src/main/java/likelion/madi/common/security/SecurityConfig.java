@@ -44,7 +44,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(Arrays.asList(
-                            "http://localhost:3000"
+                            "http://localhost:3000",
+                            "http://43.200.244.214:8080",
+                            "http://43.200.244.214:8080/login/oauth2/code/kakao",
+                            "http://43.200.244.214:8080/login/oauth2/code/google"
                     ));
                     config.setAllowedMethods(Arrays.asList(
                             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
