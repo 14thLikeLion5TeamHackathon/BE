@@ -1,14 +1,22 @@
 package likelion.madi.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import likelion.madi.dto.response.GoogleCalendarEventsResponseDto;
 import likelion.madi.service.GoogleCalendarEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Tag(name = "Today - Google Calendar", description = "구글 캘린더 연동 및 일정 조회 API")
 @RestController
 @RequestMapping("/api/v1/today/calendar")
 @RequiredArgsConstructor
@@ -16,18 +24,21 @@ public class GoogleCalendarEventController {
 
     private final GoogleCalendarEventService googleCalendarEventService;
 
+    @Operation(
+            summary = "연동된 구글 캘린더 일정 조회",
+            description = "로그인된 사용자의 구글 캘린더 연동 토큰을 이용해 구글 캘린더 일정을 조회합니다."
+    )
     @GetMapping("/events")
     public ResponseEntity<Map<String, Object>> getTodayCalendarEvents(
-            @RequestAttribute(value = "userId", required = false) Long userId, // JWT 토큰에서 추출한 유저 PK
+            @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
+            @Parameter(description = "조회 시작 날짜 (YYYY-MM-DD)", example = "2026-08-14")
             @RequestParam(value = "startDate", required = false) String startDate,
+            @Parameter(description = "조회 종료 날짜 (YYYY-MM-DD)", example = "2026-08-14")
             @RequestParam(value = "endDate", required = false) String endDate
     ) {
-        // 테스트/개발 중 userId가 null일 경우 임시 ID(1L) 적용
-        Long targetUserId = (userId != null) ? userId : 1L;
+        GoogleCalendarEventsResponseDto responseData = googleCalendarEventService.getCalendarEvents(userId, startDate, endDate);
 
-        GoogleCalendarEventsResponseDto responseData = googleCalendarEventService.getCalendarEvents(targetUserId, startDate, endDate);
-
-        // 팀 공통 응답 규격(success, code, message, data) 구조 생성
+        // 명세서 규격에 맞춘 응답 JSON 생성
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("code", 200);
