@@ -70,4 +70,15 @@ public class KakaoOAuthClient {
 
         return response.getBody();
     }
+
+    public void unlink(String accessToken) {
+        String unlinkUrl = "https://kapi.kakao.com/v1/user/unlink";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        restTemplate.postForEntity(unlinkUrl, request, String.class);
+    }
 }
