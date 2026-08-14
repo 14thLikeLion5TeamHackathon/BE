@@ -3,10 +3,12 @@ package likelion.madi.service;
 import likelion.madi.domain.KakaoNotification;
 import likelion.madi.repository.KakaoNotificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class KakaoMessageScheduler {
@@ -19,9 +21,12 @@ public class KakaoMessageScheduler {
         List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
         for (KakaoNotification notification : notifications) {
             Long userId = notification.getUser().getUserId();
-            notificationService.sendKakaoMessage(userId, "서울", "강남구");
+            try {
+                notificationService.sendKakaoMessage(userId, "서울", "강남구");
+            } catch (Exception e) {
+                log.warn("카카오 메시지 발송 실패 - userId: {}, error: {}", userId, e.getMessage());
+            }
         }
-
     }
 
     @Scheduled(cron = "0 0 21 * * *")
