@@ -53,6 +53,18 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "city", length = 30)
+    private String city;
+
+    @Column(name = "district", length = 30)
+    private String district;
+
     @Builder
     public User(String name) {
         this.name = name;
@@ -80,5 +92,12 @@ public class User {
         if (name != null) this.name = name;
         if (birthDate != null) this.birthDate = birthDate;
         if (gender != null) this.gender = gender;
+    }
+
+    public void updateLocation(Double latitude, Double longitude, String city, String district) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.city = city;
+        this.district = district;
     }
 }

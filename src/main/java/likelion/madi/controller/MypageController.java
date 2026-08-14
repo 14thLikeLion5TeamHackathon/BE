@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import likelion.madi.common.response.ApiResponse;
 import likelion.madi.common.response.SuccessStatus;
+import likelion.madi.dto.request.UserLocationUpdateRequest;
 import likelion.madi.dto.request.UserUpdateRequest;
 import likelion.madi.dto.response.UserIdResponse;
 import likelion.madi.dto.response.UserInfoResponse;
@@ -62,6 +63,22 @@ public class MypageController {
                 ApiResponse.success(
                         SuccessStatus.KAKAO_NOTIFICATION_DISCONNECT_SUCCESS.getStatusCode(),
                         SuccessStatus.KAKAO_NOTIFICATION_DISCONNECT_SUCCESS.getMessage(),
+                        null
+                )
+        );
+    }
+
+    @Operation(summary = "위치 정보 저장")
+    @PatchMapping("/location")
+    public ResponseEntity<ApiResponse<Void>> updateLocation(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody UserLocationUpdateRequest request
+    ) {
+        mypageService.updateLocation(userId, request);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessStatus.LOCATION_UPDATE_SUCCESS.getStatusCode(),
+                        SuccessStatus.LOCATION_UPDATE_SUCCESS.getMessage(),
                         null
                 )
         );
