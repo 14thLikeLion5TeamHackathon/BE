@@ -41,7 +41,7 @@ public class GoogleCalendarStatusService {
                 .connectionId(connection.getConnectionId()) // 👈 getId() -> getConnectionId()로 수정
                 .googleEmail(connection.getGoogleEmail())
                 .status(connection.getStatus())
-                .connectedAt(LocalDateTime.now()) // 👈 존재하지 않는 getCreatedAt 대신 현재 시간 설정
+                .connectedAt(connection.getConnectedAt())
                 .build();
     }
 }
