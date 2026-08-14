@@ -66,4 +66,21 @@ public class MypageController {
                 )
         );
     }
+
+    @Operation(summary = "로그아웃")
+    @PostMapping("/auth/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @AuthenticationPrincipal Long userId,
+            @RequestHeader("Authorization") String authorizationHeader
+    ) {
+        String accessToken = authorizationHeader.substring("Bearer ".length());
+        mypageService.logout(userId, accessToken);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessStatus.LOGOUT_SUCCESS.getStatusCode(),
+                        SuccessStatus.LOGOUT_SUCCESS.getMessage(),
+                        null
+                )
+        );
+    }
 }
