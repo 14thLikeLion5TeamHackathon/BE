@@ -66,4 +66,19 @@ public class MypageController {
                 )
         );
     }
+
+    @Operation(summary = "회원 탈퇴")
+    @DeleteMapping("/users/me")
+    public ResponseEntity<ApiResponse<Void>> withdraw(
+            @AuthenticationPrincipal Long userId
+    ) {
+        mypageService.withdraw(userId);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessStatus.MEMBER_WITHDRAW_SUCCESS.getStatusCode(),
+                        SuccessStatus.MEMBER_WITHDRAW_SUCCESS.getMessage(),
+                        null
+                )
+        );
+    }
 }

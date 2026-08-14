@@ -7,17 +7,23 @@ import likelion.madi.domain.User;
 import likelion.madi.dto.request.UserUpdateRequest;
 import likelion.madi.dto.response.UserIdResponse;
 import likelion.madi.dto.response.UserInfoResponse;
+import likelion.madi.repository.GoogleCalendarConnectionRepository;
 import likelion.madi.repository.KakaoNotificationRepository;
 import likelion.madi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MypageService {
 
     private final UserRepository userRepository;
+    private final KakaoOAuthClient kakaoOAuthClient;
+    private final GoogleOAuthClient googleOAuthClient;
+    private final GoogleCalendarConnectionRepository googleCalendarConnectionRepository;
     private final KakaoNotificationRepository kakaoNotificationRepository;
 
     @Transactional(readOnly = true)
@@ -49,5 +55,29 @@ public class MypageService {
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_KAKAO_NOTIFICATION));
 
         kakaoNotificationRepository.delete(notification);
+    }
+
+    @Transactional
+    public void withdraw(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        kakaoNotificationRepository.findByUser(user).ifPresent(notification -> {
+            try {
+                kakaoOAuthClient.unlink(notification.getAccessToken());
+            } catch (Exception e) {
+                log.warn("카카오 연결 해제 실패 - userId: {}, error: {}", userId, e.getMessage());
+            }
+        });
+
+        googleCalendarConnectionRepository.findByUser(user).ifPresent(connection -> {
+            try {
+                googleOAuthClient.revoke(connection.getAccessToken());
+            } catch (Exception e) {
+                log.warn("구글 연결 해제 실패 - userId: {}, error: {}", userId, e.getMessage());
+            }
+        });
+
+        userRepository.delete(user);
     }
 }

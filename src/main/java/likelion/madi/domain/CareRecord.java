@@ -52,6 +52,9 @@ public class CareRecord {
     @OneToMany(mappedBy = "careRecord", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CareRecordTag> tags = new ArrayList<>();
 
+    @OneToMany(mappedBy = "careRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AiFeedback> aiFeedbacks = new ArrayList<>();
+
     @Builder
     public CareRecord(CareCard careCard, String photoUrl, String statusDescription, Integer dDay) {
         this.careCard = careCard;
