@@ -34,6 +34,7 @@ public class MypageService {
     private final KakaoNotificationRepository kakaoNotificationRepository;
     private final JwtService jwtService;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
+    private final NominatimClient nominatimClient;
 
     @Transactional(readOnly = true)
     public UserInfoResponse getUserInfo(Long userId) {
@@ -71,9 +72,10 @@ public class MypageService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
 
-        // TODO: 지오코딩 서비스 정해지면 여기서 위경도 → city/district 변환
-        String city = null;
-        String district = null;
+        java.util.Map<String, Object> address = nominatimClient.getAddress(request.getLatitude(), request.getLongitude());
+
+        String city = (String) address.getOrDefault("city", address.getOrDefault("county", address.get("state")));
+        String district = (String) address.get("borough");
 
         user.updateLocation(request.getLatitude(), request.getLongitude(), city, district);
     }

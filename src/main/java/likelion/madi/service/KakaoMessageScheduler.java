@@ -22,7 +22,7 @@ public class KakaoMessageScheduler {
         for (KakaoNotification notification : notifications) {
             Long userId = notification.getUser().getUserId();
             try {
-                notificationService.sendKakaoMessage(userId, "서울", "강남구");
+                notificationService.sendKakaoMessage(userId, notification.getUser().getCity(), notification.getUser().getDistrict());
             } catch (Exception e) {
                 log.warn("카카오 메시지 발송 실패 - userId: {}, error: {}", userId, e.getMessage());
             }
