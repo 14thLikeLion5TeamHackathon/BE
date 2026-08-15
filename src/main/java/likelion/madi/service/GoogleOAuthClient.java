@@ -59,4 +59,18 @@ public class GoogleOAuthClient {
 
         return response.getBody();
     }
+
+    public void revoke(String accessToken) {
+        String revokeUrl = "https://oauth2.googleapis.com/revoke";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("token", accessToken);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+        restTemplate.postForEntity(revokeUrl, request, String.class);
+    }
 }

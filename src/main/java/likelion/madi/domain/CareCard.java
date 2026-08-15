@@ -45,6 +45,18 @@ public class CareCard {
     @OneToMany(mappedBy = "careCard", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CareCardTreatment> treatments = new ArrayList<>();
 
+    @OneToMany(mappedBy = "careCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CareChecklist> checklists = new ArrayList<>();
+
+    @OneToMany(mappedBy = "careCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CareJudgement> judgements = new ArrayList<>();
+
+    @OneToMany(mappedBy = "careCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TodayCareMessage> todayCareMessages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "careCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CareRecord> careRecords = new ArrayList<>();
+
     @Builder
     public CareCard(User user, LocalDate treatmentDate) {
         this.user = user;

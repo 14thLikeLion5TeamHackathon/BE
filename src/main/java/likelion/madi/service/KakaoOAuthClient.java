@@ -47,4 +47,38 @@ public class KakaoOAuthClient {
 
         return response.getBody();
     }
+
+    public KakaoTokenResponse refreshAccessToken(String refreshToken) {
+        String tokenUrl = "https://kauth.kakao.com/oauth/token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "refresh_token");
+        params.add("client_id", clientId);
+        params.add("client_secret", clientSecret);
+        params.add("refresh_token", refreshToken);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+        ResponseEntity<KakaoTokenResponse> response = restTemplate.postForEntity(
+                tokenUrl,
+                request,
+                KakaoTokenResponse.class
+        );
+
+        return response.getBody();
+    }
+
+    public void unlink(String accessToken) {
+        String unlinkUrl = "https://kapi.kakao.com/v1/user/unlink";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + accessToken);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        restTemplate.postForEntity(unlinkUrl, request, String.class);
+    }
 }
