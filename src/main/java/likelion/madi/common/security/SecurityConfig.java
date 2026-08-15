@@ -47,7 +47,8 @@ public class SecurityConfig {
                             "http://localhost:3000",
                             "http://43.200.244.214:8080",
                             "http://43.200.244.214:8080/login/oauth2/code/kakao",
-                            "http://43.200.244.214:8080/login/oauth2/code/google"
+                            "http://43.200.244.214:8080/login/oauth2/code/google",
+                            "http://localhost:5173"
                     ));
                     config.setAllowedMethods(Arrays.asList(
                             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"

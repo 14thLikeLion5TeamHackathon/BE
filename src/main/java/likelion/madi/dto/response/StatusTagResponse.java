@@ -12,17 +12,20 @@ public class StatusTagResponse {
 
     private Long tagId;
     private String name;
+    private String code;
 
     @Builder
-    public StatusTagResponse(Long tagId, String name) {
+    public StatusTagResponse(Long tagId, String name, String code) {
         this.tagId = tagId;
         this.name = name;
+        this.code = code;
     }
 
     public static StatusTagResponse from(StatusTag statusTag) {
         return StatusTagResponse.builder()
                 .tagId(statusTag.getTagId())
                 .name(statusTag.getName())
+                .code(statusTag.getCode())
                 .build();
     }
 }

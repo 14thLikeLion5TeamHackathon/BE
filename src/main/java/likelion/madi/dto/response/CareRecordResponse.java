@@ -1,7 +1,8 @@
 package likelion.madi.dto.response;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import likelion.madi.domain.CareRecord;
 import lombok.AccessLevel;
@@ -19,11 +20,11 @@ public class CareRecordResponse {
     private String statusDescription;
     private Integer dDay;
     private LocalDateTime recordedAt;
-    private List<TagInfo> tags;
+    private Map<String, Integer> tags;
 
     @Builder
     public CareRecordResponse(Long recordId, Long cardId, String photoUrl, String statusDescription,
-                              Integer dDay, LocalDateTime recordedAt, List<TagInfo> tags) {
+                              Integer dDay, LocalDateTime recordedAt, Map<String, Integer> tags) {
         this.recordId = recordId;
         this.cardId = cardId;
         this.photoUrl = photoUrl;
@@ -34,9 +35,8 @@ public class CareRecordResponse {
     }
 
     public static CareRecordResponse from(CareRecord careRecord) {
-        List<TagInfo> tagInfos = careRecord.getTags().stream()
-                .map(t -> new TagInfo(t.getStatusTag().getTagId(), t.getStatusTag().getName(), t.getIntensity()))
-                .toList();
+        Map<String, Integer> tagIntensityByCode = careRecord.getTags().stream()
+                .collect(Collectors.toMap(t -> t.getStatusTag().getCode(), t -> t.getIntensity()));
 
         return CareRecordResponse.builder()
                 .recordId(careRecord.getRecordId())
@@ -45,20 +45,7 @@ public class CareRecordResponse {
                 .statusDescription(careRecord.getStatusDescription())
                 .dDay(careRecord.getDDay())
                 .recordedAt(careRecord.getRecordedAt())
-                .tags(tagInfos)
+                .tags(tagIntensityByCode)
                 .build();
-    }
-
-    @Getter
-    public static class TagInfo {
-        private final Long tagId;
-        private final String name;
-        private final Integer intensity;
-
-        public TagInfo(Long tagId, String name, Integer intensity) {
-            this.tagId = tagId;
-            this.name = name;
-            this.intensity = intensity;
-        }
     }
 }
