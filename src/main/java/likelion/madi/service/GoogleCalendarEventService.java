@@ -26,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -49,13 +50,22 @@ public class GoogleCalendarEventService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다. ID: " + userId));
 
         // 2. 구글 캘린더 연동 여부 확인 (3번 해결: 500 대신 404 NOT_FOUND 반환)
-        GoogleCalendarConnection connection = calendarRepository.findByUser(user)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연동된 구글 캘린더 정보가 없습니다. 먼저 캘린더를 연동해주세요."));
+        Optional<GoogleCalendarConnection> connectionOpt = calendarRepository.findByUser(user);
 
-        // 연동 해제 상태 체크 (토큰이 비어있는 경우 400 Bad Request)
-        if (connection.getAccessToken() == null || connection.getAccessToken().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "구글 캘린더 연동이 해제된 상태입니다. 다시 연동해주세요.");
+        // 연동 정보가 아예 없거나, 토큰이 비어있는(해제된) 경우
+        if (connectionOpt.isEmpty() ||
+                connectionOpt.get().getAccessToken() == null ||
+                connectionOpt.get().getAccessToken().isBlank()) {
+
+            log.info("유저 ID [{}]는 캘린더 미연동/해제 상태입니다. 빈 배열을 반환합니다.", userId);
+
+            // 404/400 에러를 던지지 않고 schedules에 빈 배열([])을 담아 200 정상 응답 처리
+            return GoogleCalendarEventsResponseDto.builder()
+                    .userId(userId)
+                    .schedules(new ArrayList<>())
+                    .build();
         }
+        GoogleCalendarConnection connection = connectionOpt.get();
 
         // 3. 날짜 파싱 및 검증 (날짜 역전 체크)
         LocalDate startDate;
