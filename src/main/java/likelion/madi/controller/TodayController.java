@@ -1,5 +1,7 @@
 package likelion.madi.controller;
 
+import java.time.LocalDate;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -9,6 +11,7 @@ import likelion.madi.dto.request.ChecklistUpdateRequest;
 import likelion.madi.dto.response.TodayChecklistResponse;
 import likelion.madi.service.TodayChecklistService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,13 +30,15 @@ public class TodayController {
 
     private final TodayChecklistService todayChecklistService;
 
-    @Operation(summary = "오늘의 체크리스트 조회")
+    @Operation(summary = "오늘의 체크리스트 조회", description = "date를 안 보내면 오늘 날짜 기준으로 조회합니다.")
     @GetMapping("/checklist")
     public ResponseEntity<ApiResponse<TodayChecklistResponse>> getTodayChecklist(
-            Authentication authentication
+            Authentication authentication,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         Long userId = (Long) authentication.getPrincipal();
-        TodayChecklistResponse result = todayChecklistService.getTodayChecklist(userId);
+        TodayChecklistResponse result = todayChecklistService.getTodayChecklist(
+                userId, date != null ? date : LocalDate.now());
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessStatus.CHECKLIST_GET_SUCCESS.getStatusCode(),
                 SuccessStatus.CHECKLIST_GET_SUCCESS.getMessage(),

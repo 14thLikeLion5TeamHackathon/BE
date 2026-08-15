@@ -6,8 +6,10 @@ import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,10 +31,18 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
         log.error("Request URI: {}", request.getRequestURI());
         log.error("Request Query String: {}", request.getQueryString());
 
-        // 실패 시 로그인 페이지로 리다이렉트 (에러 파라미터와 함께)
-        String errorMessage = exception.getMessage();
-        String redirectUrl = failureRedirectUri + "&message=" +
-                java.net.URLEncoder.encode(errorMessage, "UTF-8");
+        // 실패 원인별 실제 에러 코드를 뽑아서 전달 (없으면 일반 실패로 표시)
+        String errorCode = (exception instanceof OAuth2AuthenticationException oauth2Exception
+                && oauth2Exception.getError() != null)
+                ? oauth2Exception.getError().getErrorCode()
+                : "oauth2_failure";
+
+        String redirectUrl = UriComponentsBuilder.fromUriString(failureRedirectUri)
+                .replaceQueryParam("error", errorCode)
+                .replaceQueryParam("message", exception.getMessage())
+                .build()
+                .encode()
+                .toUriString();
 
         log.info("OAuth2 실패 리다이렉트: {}", redirectUrl);
         response.sendRedirect(redirectUrl);

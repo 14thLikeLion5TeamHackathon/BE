@@ -48,17 +48,16 @@ public class TodayChecklistService {
 
     // 조회
     @Transactional
-    public TodayChecklistResponse getTodayChecklist(Long userId) {
+    public TodayChecklistResponse getTodayChecklist(Long userId, LocalDate date) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
 
-        LocalDate today = LocalDate.now();
         List<CareCard> careCards = careCardRepository.findByUser(user);
 
-        // 체크리스트 항목은 카드별로 매일 생성/유지되어야 하므로, 노출 여부와 무관하게 모든 카드에 대해 만들어둔다.
+        // 체크리스트 항목은 카드별로 날짜마다 생성/유지되어야 하므로, 노출 여부와 무관하게 모든 카드에 대해 만들어둔다.
         Map<CareCard, List<TodayChecklistResponse.Item>> itemsByCard = new LinkedHashMap<>();
         for (CareCard careCard : careCards) {
-            itemsByCard.put(careCard, buildItemsForCard(careCard, today));
+            itemsByCard.put(careCard, buildItemsForCard(careCard, date));
         }
 
         List<CareCard> cardsByUrgency = careCards.stream()

@@ -3,6 +3,7 @@ package likelion.madi.common.security;
 import java.util.Arrays;
 
 import likelion.madi.common.oauth2.CustomOAuth2UserService;
+import likelion.madi.common.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import likelion.madi.common.oauth2.OAuth2AuthenticationFailureHandler;
 import likelion.madi.common.oauth2.OAuth2AuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +30,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final JwtAuthenticationProcessingFilter jwtAuthenticationProcessingFilter;
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -102,7 +104,8 @@ public class SecurityConfig {
                 .oauth2Login(   // OAuth2
                         oauth2Login -> oauth2Login
                                 .authorizationEndpoint(auth ->
-                                        auth.baseUri("/oauth2/authorization"))
+                                        auth.baseUri("/oauth2/authorization")
+                                                .authorizationRequestRepository(authorizationRequestRepository))
                                 .successHandler(oAuth2AuthenticationSuccessHandler)
                                 .failureHandler(oAuth2AuthenticationFailureHandler)
                                 .userInfoEndpoint(userInfoEndpointConfig -> userInfoEndpointConfig
