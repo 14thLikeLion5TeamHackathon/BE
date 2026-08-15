@@ -112,4 +112,9 @@ public class User {
         this.city = city;
         this.district = district;
     }
+
+    // completeOnboarding에서 한꺼번에 채워지는 필드 중 하나로 온보딩 완료 여부를 판단
+    public boolean isOnboarded() {
+        return agreePersonalInfo != null;
+    }
 }

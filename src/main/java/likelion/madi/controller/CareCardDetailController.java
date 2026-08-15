@@ -30,8 +30,8 @@ public class CareCardDetailController {
     public ResponseEntity<ApiResponse<CareCardDetailResponse>> getCareCardDetail(
             Authentication authentication,
             @PathVariable Long cardId,
-            @RequestParam("city") String city,
-            @RequestParam("district") String district
+            @RequestParam(value = "city", required = false) String city,
+            @RequestParam(value = "district", required = false) String district
     ) {
         Long userId = (Long) authentication.getPrincipal();
         CareCardDetailResponse result = careCardService.getDetail(userId, cardId, city, district);
