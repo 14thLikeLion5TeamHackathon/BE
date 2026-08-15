@@ -35,7 +35,8 @@ public class CareRecordResponse {
 
     public static CareRecordResponse from(CareRecord careRecord) {
         List<TagInfo> tagInfos = careRecord.getTags().stream()
-                .map(t -> new TagInfo(t.getStatusTag().getTagId(), t.getStatusTag().getName(), t.getIntensity()))
+                .map(t -> new TagInfo(t.getStatusTag().getTagId(), t.getStatusTag().getName(),
+                        t.getStatusTag().getCode(), t.getIntensity()))
                 .toList();
 
         return CareRecordResponse.builder()
@@ -53,11 +54,13 @@ public class CareRecordResponse {
     public static class TagInfo {
         private final Long tagId;
         private final String name;
+        private final String code;
         private final Integer intensity;
 
-        public TagInfo(Long tagId, String name, Integer intensity) {
+        public TagInfo(Long tagId, String name, String code, Integer intensity) {
             this.tagId = tagId;
             this.name = name;
+            this.code = code;
             this.intensity = intensity;
         }
     }
