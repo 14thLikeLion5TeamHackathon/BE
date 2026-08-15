@@ -1,6 +1,7 @@
 package likelion.madi.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -16,18 +17,18 @@ public class CareRecordResponse {
 
     private Long recordId;
     private Long cardId;
-    private String photoUrl;
+    private List<String> photoUrls;
     private String statusDescription;
     private Integer dDay;
     private LocalDateTime recordedAt;
     private Map<String, Integer> tags;
 
     @Builder
-    public CareRecordResponse(Long recordId, Long cardId, String photoUrl, String statusDescription,
+    public CareRecordResponse(Long recordId, Long cardId, List<String> photoUrls, String statusDescription,
                               Integer dDay, LocalDateTime recordedAt, Map<String, Integer> tags) {
         this.recordId = recordId;
         this.cardId = cardId;
-        this.photoUrl = photoUrl;
+        this.photoUrls = photoUrls;
         this.statusDescription = statusDescription;
         this.dDay = dDay;
         this.recordedAt = recordedAt;
@@ -41,7 +42,7 @@ public class CareRecordResponse {
         return CareRecordResponse.builder()
                 .recordId(careRecord.getRecordId())
                 .cardId(careRecord.getCareCard().getCardId())
-                .photoUrl(careRecord.getPhotoUrl())
+                .photoUrls(careRecord.getPhotoUrls())
                 .statusDescription(careRecord.getStatusDescription())
                 .dDay(careRecord.getDDay())
                 .recordedAt(careRecord.getRecordedAt())

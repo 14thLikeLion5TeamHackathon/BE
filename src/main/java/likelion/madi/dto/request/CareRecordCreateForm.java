@@ -1,5 +1,7 @@
 package likelion.madi.dto.request;
 
+import java.util.List;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.Getter;
@@ -10,7 +12,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class CareRecordCreateForm {
-    private MultipartFile photo;
+    private List<MultipartFile> photo;
     private String statusDescription;
     private String tags;
 }

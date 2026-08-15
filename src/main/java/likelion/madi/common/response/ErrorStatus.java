@@ -18,6 +18,7 @@ public enum ErrorStatus {
     BAD_REQUEST_INVALID_SCHEDULE_TIME(HttpStatus.BAD_REQUEST, "INVALID_SCHEDULE_TIME", "일정 날짜/시간 형식이 올바르지 않습니다."),
     BAD_REQUEST_NOT_SUPPORTED_MEDIA_TYPE(HttpStatus.BAD_REQUEST, "NOT_SUPPORTED_MEDIA_TYPE", "지원하지 않는 미디어 타입입니다."),
     BAD_REQUEST_INVALID_IMAGE_SIZE(HttpStatus.BAD_REQUEST, "INVALID_IMAGE_SIZE", "이미지 파일 크기가 15MB 보다 큽니다."),
+    BAD_REQUEST_TOO_MANY_PHOTOS(HttpStatus.BAD_REQUEST, "TOO_MANY_PHOTOS", "사진은 최대 5장까지 첨부할 수 있습니다."),
     BAD_REQUEST_INVALID_ONBOARDING_INPUT(HttpStatus.BAD_REQUEST, "INVALID_ONBOARDING_INPUT", "필수 입력 항목이 누락되었거나 필수 약관 동의가 필요합니다." ),
     BAD_REQUEST_SYMPTOM_TAGS_REQUIRED(HttpStatus.BAD_REQUEST, "SYMPTOM_TAGS_REQUIRED", "모든 증상 태그를 입력해야 합니다."),
 

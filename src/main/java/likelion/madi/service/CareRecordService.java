@@ -22,6 +22,7 @@ import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
 import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareRecord;
+import likelion.madi.domain.CareRecordPhoto;
 import likelion.madi.domain.CareRecordTag;
 import likelion.madi.domain.StatusTag;
 import likelion.madi.dto.response.CareRecordResponse;
@@ -35,6 +36,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CareRecordService {
 
+    private static final int MAX_PHOTO_COUNT = 5;
+
     private final CareRecordRepository careRecordRepository;
     private final CareCardRepository careCardRepository;
     private final StatusTagRepository statusTagRepository;
@@ -44,17 +47,21 @@ public class CareRecordService {
 
 
     // 상태 기록 등록 API
-    public CareRecordResponse create(Long cardId, MultipartFile photo, String statusDescription, String tagsJson) {
-        boolean noPhoto = (photo == null || photo.isEmpty());
+    public CareRecordResponse create(Long cardId, List<MultipartFile> photos, String statusDescription, String tagsJson) {
+        List<MultipartFile> validPhotos = photos == null ? List.of()
+                : photos.stream().filter(p -> p != null && !p.isEmpty()).toList();
+        boolean noPhoto = validPhotos.isEmpty();
         boolean noDescription = (statusDescription == null || statusDescription.isBlank());
         if (noPhoto && noDescription) {
             throw new BadRequestException(ErrorStatus.BAD_REQUEST_RECORD_CONTENT_REQUIRED);
+        }
+        if (validPhotos.size() > MAX_PHOTO_COUNT) {
+            throw new BadRequestException(ErrorStatus.BAD_REQUEST_TOO_MANY_PHOTOS);
         }
 
         CareCard careCard = careCardRepository.findById(cardId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
 
-        String photoUrl = noPhoto ? null : fileStorageService.store(photo);
         Map<String, Integer> tagIntensityByCode = parseTags(tagsJson);
         List<StatusTag> statusTags = statusTagRepository.findAll();
         validateAllTagsPresent(statusTags, tagIntensityByCode);
@@ -63,12 +70,20 @@ public class CareRecordService {
 
         CareRecord careRecord = CareRecord.builder()
                 .careCard(careCard)
-                .photoUrl(photoUrl)
                 .statusDescription(statusDescription)
                 .dDay(dDay)
                 .build();
 
         careRecordRepository.save(careRecord);
+
+        for (int i = 0; i < validPhotos.size(); i++) {
+            String photoUrl = fileStorageService.store(validPhotos.get(i));
+            careRecord.addPhoto(CareRecordPhoto.builder()
+                    .careRecord(careRecord)
+                    .photoUrl(photoUrl)
+                    .sortOrder(i)
+                    .build());
+        }
 
         for (StatusTag statusTag : statusTags) {
             Integer intensity = tagIntensityByCode.get(statusTag.getCode());
@@ -155,7 +170,7 @@ public class CareRecordService {
                 .recordId(record.getRecordId())
                 .recordedAt(record.getRecordedAt().toLocalDate())
                 .dDay(record.getDDay())
-                .photoUrl(record.getPhotoUrl())
+                .photoUrls(record.getPhotoUrls())
                 .statusDescription(record.getStatusDescription())
                 .redness(intensityByTag.get("붉은기"))
                 .swelling(intensityByTag.get("부기"))

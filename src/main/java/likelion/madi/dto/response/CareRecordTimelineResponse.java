@@ -26,7 +26,7 @@ public class CareRecordTimelineResponse {
         private Long recordId;
         private LocalDate recordedAt;
         private Integer dDay;
-        private String photoUrl;
+        private List<String> photoUrls;
         private String statusDescription;
         private Integer redness;
         private Integer swelling;
@@ -35,13 +35,13 @@ public class CareRecordTimelineResponse {
         private AiFeedbackItem aiFeedback;
 
         @Builder
-        public CareRecordTimelineItem(Long recordId, LocalDate recordedAt, Integer dDay, String photoUrl,
+        public CareRecordTimelineItem(Long recordId, LocalDate recordedAt, Integer dDay, List<String> photoUrls,
                                       String statusDescription, Integer redness, Integer swelling,
                                       Integer pain, Integer dryness, AiFeedbackItem aiFeedback) {
             this.recordId = recordId;
             this.recordedAt = recordedAt;
             this.dDay = dDay;
-            this.photoUrl = photoUrl;
+            this.photoUrls = photoUrls;
             this.statusDescription = statusDescription;
             this.redness = redness;
             this.swelling = swelling;
