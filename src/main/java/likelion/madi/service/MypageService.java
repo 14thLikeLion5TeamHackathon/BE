@@ -7,6 +7,7 @@ import likelion.madi.domain.BlacklistedToken;
 import likelion.madi.domain.KakaoNotification;
 import likelion.madi.domain.User;
 import likelion.madi.dto.request.UserUpdateRequest;
+import likelion.madi.dto.request.UserLocationUpdateRequest;
 import likelion.madi.dto.response.UserIdResponse;
 import likelion.madi.dto.response.UserInfoResponse;
 import likelion.madi.repository.GoogleCalendarConnectionRepository;
@@ -33,6 +34,7 @@ public class MypageService {
     private final KakaoNotificationRepository kakaoNotificationRepository;
     private final JwtService jwtService;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
+    private final NominatimClient nominatimClient;
 
     @Transactional(readOnly = true)
     public UserInfoResponse getUserInfo(Long userId) {
@@ -63,6 +65,19 @@ public class MypageService {
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_KAKAO_NOTIFICATION));
 
         kakaoNotificationRepository.delete(notification);
+    }
+
+    @Transactional
+    public void updateLocation(Long userId, UserLocationUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        java.util.Map<String, Object> address = nominatimClient.getAddress(request.getLatitude(), request.getLongitude());
+
+        String city = (String) address.getOrDefault("city", address.getOrDefault("county", address.get("state")));
+        String district = (String) address.get("borough");
+
+        user.updateLocation(request.getLatitude(), request.getLongitude(), city, district);
     }
 
     @Transactional

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import likelion.madi.common.response.ApiResponse;
 import likelion.madi.common.response.SuccessStatus;
+import likelion.madi.dto.request.UserLocationUpdateRequest;
 import likelion.madi.dto.request.UserUpdateRequest;
 import likelion.madi.dto.response.UserIdResponse;
 import likelion.madi.dto.response.UserInfoResponse;
@@ -67,7 +68,23 @@ public class MypageController {
         );
     }
 
-        @Operation(summary = "회원 탈퇴")
+    @Operation(summary = "위치 정보 저장")
+    @PatchMapping("/location")
+    public ResponseEntity<ApiResponse<Void>> updateLocation(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody UserLocationUpdateRequest request
+    ) {
+        mypageService.updateLocation(userId, request);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessStatus.LOCATION_UPDATE_SUCCESS.getStatusCode(),
+                        SuccessStatus.LOCATION_UPDATE_SUCCESS.getMessage(),
+                        null
+                )
+        );
+    }
+
+    @Operation(summary = "회원 탈퇴")
     @DeleteMapping("/users/me")
     public ResponseEntity<ApiResponse<Void>> withdraw(
             @AuthenticationPrincipal Long userId
@@ -99,4 +116,3 @@ public class MypageController {
         );
     }
 }
-

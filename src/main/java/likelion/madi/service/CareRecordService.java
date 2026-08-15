@@ -24,7 +24,6 @@ import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareRecord;
 import likelion.madi.domain.CareRecordTag;
 import likelion.madi.domain.StatusTag;
-import likelion.madi.dto.request.CareRecordTagEntry;
 import likelion.madi.dto.response.CareRecordResponse;
 import likelion.madi.repository.CareCardRepository;
 import likelion.madi.repository.CareRecordRepository;
@@ -56,8 +55,9 @@ public class CareRecordService {
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
 
         String photoUrl = noPhoto ? null : fileStorageService.store(photo);
-        List<CareRecordTagEntry> tagEntries = parseTags(tagsJson);
-        validateAllTagsPresent(tagEntries);
+        Map<String, Integer> tagIntensityByCode = parseTags(tagsJson);
+        List<StatusTag> statusTags = statusTagRepository.findAll();
+        validateAllTagsPresent(statusTags, tagIntensityByCode);
 
         int dDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), LocalDate.now());
 
@@ -70,46 +70,41 @@ public class CareRecordService {
 
         careRecordRepository.save(careRecord);
 
-        for (CareRecordTagEntry entry : tagEntries) {
-            StatusTag statusTag = statusTagRepository.findById(entry.getTagId())
-                    .orElseThrow(() -> new BadRequestException("존재하지 않는 상태 태그입니다."));
-
-            careRecord.addTag(new CareRecordTag(careRecord, statusTag, entry.getIntensity()));
+        for (StatusTag statusTag : statusTags) {
+            Integer intensity = tagIntensityByCode.get(statusTag.getCode());
+            careRecord.addTag(new CareRecordTag(careRecord, statusTag, intensity));
         }
 
         return CareRecordResponse.from(careRecord);
     }
 
-    private List<CareRecordTagEntry> parseTags(String tagsJson) {
+    private Map<String, Integer> parseTags(String tagsJson) {
 
-        List <CareRecordTagEntry> tagEntries;
+        Map<String, Integer> tagIntensityByCode;
 
         try {
-           tagEntries=objectMapper.readValue(tagsJson,
-                    objectMapper.getTypeFactory().constructCollectionType(List.class, CareRecordTagEntry.class));
+            tagIntensityByCode = objectMapper.readValue(tagsJson,
+                    objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Integer.class));
         } catch (Exception e) {
-            throw new BadRequestException("tags 형식이 올바르지 않습니다. 예: [{\"tagId\":1,\"intensity\":2}]");
+            throw new BadRequestException(
+                    "tags 형식이 올바르지 않습니다. 예: {\"redness\":2,\"swelling\":0,\"pain\":1,\"dryness\":3}");
         }
 
-        for (CareRecordTagEntry entry : tagEntries) {
-            if (entry.getIntensity() == null || entry.getIntensity() < 0 || entry.getIntensity() > 3) {
+        for (Integer intensity : tagIntensityByCode.values()) {
+            if (intensity == null || intensity < 0 || intensity > 3) {
                 throw new BadRequestException("intensity는 0~3 사이 값이어야 합니다.");
             }
         }
 
-        return tagEntries;
+        return tagIntensityByCode;
     }
 
-    private void validateAllTagsPresent(List<CareRecordTagEntry> tagEntries) {
-        Set<Long> requiredTagIds = statusTagRepository.findAll().stream()
-                .map(StatusTag::getTagId)
+    private void validateAllTagsPresent(List<StatusTag> statusTags, Map<String, Integer> tagIntensityByCode) {
+        Set<String> requiredCodes = statusTags.stream()
+                .map(StatusTag::getCode)
                 .collect(Collectors.toSet());
 
-        Set<Long> submittedTagIds = tagEntries.stream()
-                .map(CareRecordTagEntry::getTagId)
-                .collect(Collectors.toSet());
-
-        if (!submittedTagIds.containsAll(requiredTagIds)) {
+        if (!tagIntensityByCode.keySet().containsAll(requiredCodes)) {
             throw new BadRequestException(ErrorStatus.BAD_REQUEST_SYMPTOM_TAGS_REQUIRED);
         }
     }

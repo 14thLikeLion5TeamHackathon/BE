@@ -25,8 +25,16 @@ public class StatusTag {
     @Column(name = "name", length = 30)
     private String name;
 
+    @Column(name = "code", length = 30)
+    private String code;
+
     @Builder
-    public StatusTag(String name) {
+    public StatusTag(String name, String code) {
         this.name = name;
+        this.code = code;
+    }
+
+    public void updateCode(String code) {
+        this.code = code;
     }
 }
