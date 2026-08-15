@@ -2,21 +2,28 @@ package likelion.madi.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import likelion.madi.domain.Weather;
-import likelion.madi.repository.WeatherRepository;
+import likelion.madi.common.exception.BadRequestException;
+import likelion.madi.common.response.ErrorStatus;
 import likelion.madi.domain.RegionMapper;
+import likelion.madi.domain.Weather;
 import likelion.madi.dto.response.WeatherResponseDto;
+import likelion.madi.repository.WeatherRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WeatherService {
@@ -25,12 +32,34 @@ public class WeatherService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // 🌟 OpenWeatherMap 5일 예보 지원 범위 (오늘 포함 최대 5일: 0, 1, 2, 3, 4일 뒤)
+    // 기상청 단기예보(3일) 기준이라면 3으로 변경하시면 됩니다.
+    private static final int MAX_FORECAST_DAYS = 5;
+
     @Value("${openweathermap.api.key:1f90a4007ee2683ffb37f7c6786fa299}")
     private String apiKey;
+
+    /**
+     * 예보 제공 날짜 유효성 검증 메서드
+     * - 오늘보다 과거 날짜이거나, 제공 가능한 범위를 벗어난 미래 날짜인 경우 400 Bad Request
+     */
+    private void validateForecastRange(LocalDate date) {
+        LocalDate today = LocalDate.now();
+        long daysDiff = ChronoUnit.DAYS.between(today, date);
+
+        if (daysDiff < 0 || daysDiff >= MAX_FORECAST_DAYS) {
+            log.warn("예보 범위를 벗어난 날짜 요청: requestedDate={}, today={}, daysDiff={}", date, today, daysDiff);
+            // 🌟 ErrorStatus 없이 String 메시지로 바로 던집니다!
+            throw new BadRequestException("예보 제공 범위를 벗어난 날짜입니다.");
+        }
+    }
 
     @Transactional
     public WeatherResponseDto getWeather(Double lat, Double lon, String city, String district, LocalDate targetDate) {
         LocalDate date = (targetDate != null) ? targetDate : LocalDate.now();
+
+        // 🌟 1. 날짜 유효성 검증 (과거 또는 예보 범위 초과 시 400 에러)
+        validateForecastRange(date);
 
         Integer intLat = null;
         Integer intLon = null;
@@ -87,6 +116,10 @@ public class WeatherService {
     @Transactional
     public WeatherResponseDto getWeatherAndEnvironment(LocalDate targetDate, String city, String district) {
         LocalDate date = (targetDate != null) ? targetDate : LocalDate.now();
+
+        // 🌟 1. 날짜 유효성 검증 (과거 또는 예보 범위 초과 시 400 에러)
+        validateForecastRange(date);
+
         String targetCity = (city != null) ? city : "서울특별시";
         String targetDistrict = (district != null) ? district : "중구";
 
