@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Entity
@@ -36,8 +37,12 @@ public class CareRecord {
     @JoinColumn(name = "card_id")
     private CareCard careCard;
 
+    // 더 이상 새 기록에는 쓰이지 않음. 여러 장 지원 이전에 저장된 기존 기록의 사진 마이그레이션용으로만 남겨둠 -> CareRecordPhotoMigrationLoader 참고
     @Column(name = "photo_url", length = 255)
     private String photoUrl;
+
+    @OneToMany(mappedBy = "careRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CareRecordPhoto> photos = new ArrayList<>();
 
     @Lob
     @Column(name = "status_description", columnDefinition = "TEXT")
@@ -66,5 +71,19 @@ public class CareRecord {
 
     public void addTag(CareRecordTag tag) {
         this.tags.add(tag);
+    }
+
+    public void addPhoto(CareRecordPhoto photo) {
+        this.photos.add(photo);
+    }
+
+    public List<String> getPhotoUrls() {
+        if (!photos.isEmpty()) {
+            return photos.stream()
+                    .sorted(Comparator.comparing(CareRecordPhoto::getSortOrder))
+                    .map(CareRecordPhoto::getPhotoUrl)
+                    .toList();
+        }
+        return photoUrl != null ? List.of(photoUrl) : List.of();
     }
 }

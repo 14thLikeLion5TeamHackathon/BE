@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 // 케어카드 리스트 조회 (전체 조회) 상세 페이지꺼
 @Getter
@@ -20,7 +21,7 @@ public class CareCardListResponse {
     private Long recordId;
     private LocalDate recordedAt;
     private Integer dDay;
-    private String photoUrl;
+    private List<String> photoUrls;
     private String statusDescription;
     private Integer redness;
     private Integer swelling;
@@ -31,7 +32,7 @@ public class CareCardListResponse {
     @Builder
     public CareCardListResponse(Long cardId, String treatmentName, LocalDate treatmentDate, String status,
                                 Integer recoveryTotalDays, Long recordId, LocalDate recordedAt, Integer dDay,
-                                String photoUrl, String statusDescription, Integer redness, Integer swelling,
+                                List<String> photoUrls, String statusDescription, Integer redness, Integer swelling,
                                 Integer pain, Integer dryness, AiFeedbackItem aiFeedback) {
         this.cardId = cardId;
         this.treatmentName = treatmentName;
@@ -41,7 +42,7 @@ public class CareCardListResponse {
         this.recordId = recordId;
         this.recordedAt = recordedAt;
         this.dDay = dDay;
-        this.photoUrl = photoUrl;
+        this.photoUrls = photoUrls;
         this.statusDescription = statusDescription;
         this.redness = redness;
         this.swelling = swelling;

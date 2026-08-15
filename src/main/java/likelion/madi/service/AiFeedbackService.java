@@ -205,11 +205,16 @@ public class AiFeedbackService {
     }
 
     private int countPhotos(CareRecord current, CareRecord previous) {
-        int count = current.getPhotoUrl() != null ? 1 : 0;
-        if (previous != null && previous.getPhotoUrl() != null) {
-            count++;
+        int count = current.getPhotoUrls().size();
+        if (previous != null) {
+            count += previous.getPhotoUrls().size();
         }
         return count;
+    }
+
+    private String firstPhotoUrl(CareRecord record) {
+        List<String> photoUrls = record.getPhotoUrls();
+        return photoUrls.isEmpty() ? null : photoUrls.get(0);
     }
 
     private RecoveryGuide findMatchingGuide(Treatment treatment, int dDay) {
@@ -252,8 +257,8 @@ public class AiFeedbackService {
         return new AiFeedbackResponse.ComparisonInfo(
                 previous != null ? previous.getRecordId() : null,
                 previous != null ? previous.getDDay() : null,
-                previous != null ? previous.getPhotoUrl() : null,
-                current.getPhotoUrl(),
+                previous != null ? firstPhotoUrl(previous) : null,
+                firstPhotoUrl(current),
                 symptoms,
                 current.getStatusDescription()
         );
