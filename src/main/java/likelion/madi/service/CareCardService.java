@@ -194,7 +194,7 @@ public class CareCardService {
                 builder.recordId(record.getRecordId())
                         .recordedAt(record.getRecordedAt().toLocalDate())
                         .dDay(record.getDDay())
-                        .photoUrl(record.getPhotoUrl())
+                        .photoUrls(record.getPhotoUrls())
                         .statusDescription(record.getStatusDescription())
                         .redness(intensityByTag.get("붉은기"))
                         .swelling(intensityByTag.get("부기"))
