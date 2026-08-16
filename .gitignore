@@ -18,6 +18,7 @@ omc
 .DS_Store
 out/
 uploads/
+.claude/
 
 ### STS ###
 .apt_generated
