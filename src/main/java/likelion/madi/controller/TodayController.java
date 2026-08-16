@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import likelion.madi.common.response.ApiResponse;
 import likelion.madi.common.response.SuccessStatus;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.dto.request.ChecklistUpdateRequest;
 import likelion.madi.dto.response.TodayChecklistResponse;
 import likelion.madi.service.TodayChecklistService;
@@ -38,7 +39,7 @@ public class TodayController {
     ) {
         Long userId = (Long) authentication.getPrincipal();
         TodayChecklistResponse result = todayChecklistService.getTodayChecklist(
-                userId, date != null ? date : LocalDate.now());
+                userId, date != null ? date : KstDate.today());
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessStatus.CHECKLIST_GET_SUCCESS.getStatusCode(),
                 SuccessStatus.CHECKLIST_GET_SUCCESS.getMessage(),

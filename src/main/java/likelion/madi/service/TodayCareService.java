@@ -2,6 +2,7 @@ package likelion.madi.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.*;
 import likelion.madi.repository.CareRecordRepository;
 import likelion.madi.repository.TodayCareMessageRepository;
@@ -52,7 +53,7 @@ public class TodayCareService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String generateOrGetTodayCare(CareCard careCard, Treatment treatment, int dDay,
                                           String city, String district) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = KstDate.today();
 
         return todayCareMessageRepository.findByCareCardAndTargetDate(careCard, today)
                 .map(TodayCareMessage::getGeneratedText)
@@ -83,7 +84,7 @@ public class TodayCareService {
     }
     private String buildPrompt(CareCard careCard, Treatment treatment, int dDay,
                                String city, String district) {
-        WeatherResponseDto weather = weatherService.getWeatherAndEnvironment(LocalDate.now(), city, district);
+        WeatherResponseDto weather = weatherService.getWeatherAndEnvironment(KstDate.today(), city, district);
         List<CareRecord> recentRecords = careRecordRepository.findTop3ByCareCardOrderByRecordedAtDesc(careCard);
 
         StringBuilder sb = new StringBuilder();

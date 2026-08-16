@@ -6,6 +6,7 @@ import likelion.madi.common.exception.BaseException;
 import likelion.madi.common.exception.ForbiddenException;
 import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.AiFeedback;
 import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareCardTreatment;
@@ -93,7 +94,7 @@ public class AiFeedbackService {
             throw new BaseException(ErrorStatus.CONFLICT_FEEDBACK_ALREADY_EXISTS);
         }
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = KstDate.today().atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         if (aiFeedbackRepository.countTodayByUser(userId, startOfDay, endOfDay) >= DAILY_QUOTA) {
             throw new BaseException(ErrorStatus.TOO_MANY_REQUESTS_FEEDBACK_QUOTA_EXCEEDED);
