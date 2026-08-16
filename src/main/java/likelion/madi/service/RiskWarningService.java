@@ -6,6 +6,7 @@ import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareCardTreatment;
 import likelion.madi.domain.Schedule;
 import likelion.madi.domain.Treatment;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.User;
 import likelion.madi.repository.CareCardRepository;
 import likelion.madi.repository.ScheduleRepository;
@@ -45,7 +46,7 @@ public class RiskWarningService {
     private String openAiApiKey;
 
     public Optional<String> checkTomorrowRisk(User user) {
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        LocalDate tomorrow = KstDate.today().plusDays(1);
 
         List<Schedule> schedules = scheduleRepository.findByUserAndEventDate(user, tomorrow);
         List<CareCard> cards = careCardRepository.findByUser(user);

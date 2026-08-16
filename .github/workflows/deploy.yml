@@ -21,10 +21,15 @@ jobs:
             git fetch origin
             git checkout main
             git reset --hard origin/main
-            if grep -q '^OPENAI_API_KEY=' .env; then
-              sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|" .env
-            else
-              echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-            fi
+            set_env() {
+              if grep -q "^$1=" .env; then
+                sed -i "s|^$1=.*|$1=$2|" .env
+              else
+                echo "$1=$2" >> .env
+              fi
+            }
+            set_env OPENAI_API_KEY "${{ secrets.OPENAI_API_KEY }}"
+            set_env GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
+            set_env GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}"
             docker compose up -d --build
             docker image prune -f

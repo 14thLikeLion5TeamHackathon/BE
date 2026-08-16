@@ -4,6 +4,7 @@ import likelion.madi.common.exception.BadRequestException;
 import likelion.madi.common.exception.ForbiddenException;
 import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.*;
 import likelion.madi.dto.request.CareCardCreateRequest;
 import likelion.madi.dto.response.CareCardCreateResponse;
@@ -88,7 +89,7 @@ public class CareCardService {
         Treatment treatment = primary.getTreatment();
 
         // 디데이 계산 (며칠 지났는지)
-        int dDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), LocalDate.now());
+        int dDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), KstDate.today());
 
         if (treatment == null) {
             return CareCardDetailResponse.builder()
@@ -133,8 +134,8 @@ public class CareCardService {
 
     // AI 피드백 몇번 사용했는지
     private CareCardDetailResponse.FeedbackQuota buildFeedbackQuota(Long userId) {
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = LocalDate.now().plusDays(1).atStartOfDay();
+        LocalDateTime startOfDay = KstDate.today().atStartOfDay();
+        LocalDateTime endOfDay = KstDate.today().plusDays(1).atStartOfDay();
         long used = aiFeedbackRepository.countTodayByUser(userId, startOfDay, endOfDay);
         return CareCardDetailResponse.FeedbackQuota.builder()
                 .used(used)
@@ -165,7 +166,7 @@ public class CareCardService {
         for (CareCard careCard : careCards) {
             CareCardTreatment primary = careCard.getTreatments().get(0);
             Treatment treatment = primary.getTreatment();
-            int cardDDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), LocalDate.now());
+            int cardDDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), KstDate.today());
 
             String treatmentName = treatment != null ? treatment.getName() : primary.getCustomName();
             Integer recoveryTotalDays = treatment != null ? treatment.getRecoveryTotalDays() : null;

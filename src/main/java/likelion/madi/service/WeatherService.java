@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import likelion.madi.common.exception.BadRequestException;
 import likelion.madi.common.response.ErrorStatus;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.RegionMapper;
 import likelion.madi.domain.Weather;
 import likelion.madi.dto.response.WeatherResponseDto;
@@ -44,7 +45,7 @@ public class WeatherService {
      * - 오늘보다 과거 날짜이거나, 제공 가능한 범위를 벗어난 미래 날짜인 경우 400 Bad Request
      */
     private void validateForecastRange(LocalDate date) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = KstDate.today();
         long daysDiff = ChronoUnit.DAYS.between(today, date);
 
         if (daysDiff < 0 || daysDiff >= MAX_FORECAST_DAYS) {
@@ -56,7 +57,7 @@ public class WeatherService {
 
     @Transactional
     public WeatherResponseDto getWeather(Double lat, Double lon, String city, String district, LocalDate targetDate) {
-        LocalDate date = (targetDate != null) ? targetDate : LocalDate.now();
+        LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
         // 🌟 1. 날짜 유효성 검증 (과거 또는 예보 범위 초과 시 400 에러)
         validateForecastRange(date);
@@ -115,7 +116,7 @@ public class WeatherService {
 
     @Transactional
     public WeatherResponseDto getWeatherAndEnvironment(LocalDate targetDate, String city, String district) {
-        LocalDate date = (targetDate != null) ? targetDate : LocalDate.now();
+        LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
         // 🌟 1. 날짜 유효성 검증 (과거 또는 예보 범위 초과 시 400 에러)
         validateForecastRange(date);

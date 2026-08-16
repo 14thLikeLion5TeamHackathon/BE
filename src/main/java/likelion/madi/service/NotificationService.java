@@ -2,6 +2,7 @@ package likelion.madi.service;
 
 import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareCardTreatment;
 import likelion.madi.domain.KakaoNotification;
@@ -90,7 +91,7 @@ public class NotificationService {
 
         CareCardTreatment primary = activeCard.getTreatments().get(0);
         Treatment treatment = primary.getTreatment();
-        int dDay = (int) ChronoUnit.DAYS.between(activeCard.getTreatmentDate(), LocalDate.now());
+        int dDay = (int) ChronoUnit.DAYS.between(activeCard.getTreatmentDate(), KstDate.today());
 
         String message = todayCareService.generateOrGetTodayCare(activeCard, treatment, dDay, city, district);
 
@@ -113,7 +114,7 @@ public class NotificationService {
                 List<CareCard> cards = careCardRepository.findByUser(user);
 
                 for (CareCard card : cards) {
-                    int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
+                    int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), KstDate.today());
                     if (dDay == 3 || dDay == 7) {
                         CareCardTreatment primary = card.getTreatments().get(0);
                         String treatmentName = primary.getTreatment() != null
@@ -145,7 +146,7 @@ public class NotificationService {
         if (treatment == null || treatment.getRecoveryTotalDays() == null) {
             return true;
         }
-        int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), LocalDate.now());
+        int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), KstDate.today());
         return dDay <= treatment.getRecoveryTotalDays();
     }
 
