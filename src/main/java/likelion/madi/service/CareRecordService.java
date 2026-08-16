@@ -20,6 +20,7 @@ import likelion.madi.common.exception.BadRequestException;
 import likelion.madi.common.exception.ForbiddenException;
 import likelion.madi.common.exception.NotFoundException;
 import likelion.madi.common.response.ErrorStatus;
+import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareRecord;
 import likelion.madi.domain.CareRecordPhoto;
@@ -66,7 +67,7 @@ public class CareRecordService {
         List<StatusTag> statusTags = statusTagRepository.findAll();
         validateAllTagsPresent(statusTags, tagIntensityByCode);
 
-        int dDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), LocalDate.now());
+        int dDay = (int) ChronoUnit.DAYS.between(careCard.getTreatmentDate(), KstDate.today());
 
         CareRecord careRecord = CareRecord.builder()
                 .careCard(careCard)
