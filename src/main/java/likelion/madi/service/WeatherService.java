@@ -50,6 +50,14 @@ public class WeatherService {
         }
     }
 
+    /**
+     * 좌표를 소수점 2자리로 보정하는 메서드 (약 1.1km 격자 단위)
+     * 예: 37.5665 -> 37.57 / 126.9780 -> 126.98
+     */
+    private double roundToTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
     @Transactional
     public WeatherResponseDto getWeather(Double lat, Double lon, String city, String district, LocalDate targetDate) {
         LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
@@ -57,16 +65,19 @@ public class WeatherService {
         // 🌟 1. 날짜 유효성 검증
         validateForecastRange(date);
 
-        // 🌟 2. 위경도(GPS) 좌표가 직접 들어온 경우 (반올림 없이 실수 Double 좌표로 DB 조회 & 캐싱)
+        // 🌟 2. 위경도(GPS) 좌표가 직접 들어온 경우 -> 소수점 2자리로 보정하여 DB 캐싱 처리
         if (lat != null && lon != null && Math.abs(lat) <= 90.0 && Math.abs(lon) <= 180.0) {
-            // 2-1. DB에서 실수 좌표 캐시가 있는지 먼저 확인 (Cache Hit)
-            List<Weather> cachedGpsWeather = weatherRepository.findByTargetDateAndLatitudeAndLongitude(date, lat, lon);
+            double roundedLat = roundToTwoDecimals(lat);
+            double roundedLon = roundToTwoDecimals(lon);
+
+            // 2-1. 소수점 2자리 격자 캐시가 DB에 있는지 먼저 확인 (Cache Hit -> 외부 API 호출 방지)
+            List<Weather> cachedGpsWeather = weatherRepository.findByTargetDateAndLatitudeAndLongitude(date, roundedLat, roundedLon);
             if (!cachedGpsWeather.isEmpty()) {
                 return new WeatherResponseDto(cachedGpsWeather.get(0));
             }
 
-            // 2-2. DB에 없으면 해당 실수 좌표로 외부 API 호출 후 DB에 저장 (Cache Miss)
-            return callOpenWeatherMapForecastApi(lat, lon, date, "GPS_USER", "lat_" + lat + "_lon_" + lon, lat, lon, true);
+            // 2-2. DB에 없으면 외부 API 호출 후 소수점 2자리 좌표로 DB 저장 (Cache Miss)
+            return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, "GPS_USER", "lat_" + roundedLat + "_lon_" + roundedLon, roundedLat, roundedLon, true);
         }
 
         // 📍 3. 지역명(city, district)이 제공된 경우
@@ -77,32 +88,31 @@ public class WeatherService {
             }
 
             RegionMapper.Coordinate coord = RegionMapper.getCoordinate(city, district);
-            lat = coord.getLat();
-            lon = coord.getLon();
+            double roundedLat = roundToTwoDecimals(coord.getLat());
+            double roundedLon = roundToTwoDecimals(coord.getLon());
 
-            return callOpenWeatherMapForecastApi(lat, lon, date, city, district, lat, lon, true);
+            return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, city, district, roundedLat, roundedLon, true);
         }
 
         // 📍 4. 둘 다 없는 경우 기본값 (서울 중구) 처리
         city = "서울특별시";
         district = "중구";
         RegionMapper.Coordinate defaultCoord = RegionMapper.getCoordinate(city, district);
-        lat = defaultCoord.getLat();
-        lon = defaultCoord.getLon();
+        double roundedLat = roundToTwoDecimals(defaultCoord.getLat());
+        double roundedLon = roundToTwoDecimals(defaultCoord.getLon());
 
         List<Weather> cachedDefaultList = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
         if (!cachedDefaultList.isEmpty()) {
             return new WeatherResponseDto(cachedDefaultList.get(0));
         }
 
-        return callOpenWeatherMapForecastApi(lat, lon, date, city, district, lat, lon, true);
+        return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, city, district, roundedLat, roundedLon, true);
     }
 
     @Transactional
     public WeatherResponseDto getWeatherAndEnvironment(LocalDate targetDate, String city, String district) {
         LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
-        // 🌟 1. 날짜 유효성 검증
         validateForecastRange(date);
 
         String targetCity = (city != null) ? city : "서울특별시";
@@ -114,8 +124,11 @@ public class WeatherService {
         }
 
         RegionMapper.Coordinate coord = RegionMapper.getCoordinate(targetCity, targetDistrict);
-        return callOpenWeatherMapForecastApi(coord.getLat(), coord.getLon(), date, targetCity, targetDistrict,
-                coord.getLat(), coord.getLon(), true);
+        double roundedLat = roundToTwoDecimals(coord.getLat());
+        double roundedLon = roundToTwoDecimals(coord.getLon());
+
+        return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, targetCity, targetDistrict,
+                roundedLat, roundedLon, true);
     }
 
     private WeatherResponseDto callOpenWeatherMapForecastApi(double lat, double lon, LocalDate targetDate,
@@ -191,8 +204,8 @@ public class WeatherService {
                     .targetDate(targetDate)
                     .city(city != null ? city : "GPS_USER")
                     .district(district != null ? district : "UNKNOWN")
-                    .latitude(latToSave)   // 🌟 Double 실수 좌표로 저장
-                    .longitude(lonToSave) // 🌟 Double 실수 좌표로 저장
+                    .latitude(latToSave)   // 🌟 Double 소수점 2자리 저장
+                    .longitude(lonToSave) // 🌟 Double 소수점 2자리 저장
                     .temperature(finalTemp)
                     .weatherCondition(finalCondition)
                     .pm10Status(finalPm10Status)
