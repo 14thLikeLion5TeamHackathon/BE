@@ -24,8 +24,8 @@ public class Weather {
     private String city;
     private String district;
 
-    private Integer latitude;
-    private Integer longitude;
+    private Double latitude;   // 👈 Double 유지
+    private Double longitude;  // 👈 Double 유지
 
     private String temperature;
     private String weatherCondition;
@@ -34,7 +34,8 @@ public class Weather {
     private Integer pm10Value;
 
     @Builder
-    public Weather(LocalDate targetDate, String city, String district, Integer latitude, Integer longitude,
+    public Weather(LocalDate targetDate, String city, String district,
+                   Double latitude, Double longitude, // 🌟 Integer -> Double로 수정 완료!
                    String temperature, String weatherCondition, String uvIndex, String pm10Status, Integer pm10Value) {
         this.targetDate = targetDate;
         this.city = city;
