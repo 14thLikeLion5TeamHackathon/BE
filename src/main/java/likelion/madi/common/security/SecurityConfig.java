@@ -53,7 +53,10 @@ public class SecurityConfig {
                             "http://localhost:5173",
                             "http://localhost:5174",
                             "https://madi-eta.vercel.app",
-                            "https://madi.hufsglobalikelion.co.kr"
+                            "https://madi.hufsglobalikelion.co.kr",
+                            "http://madi.hufsglobalikelion.co.kr/login/oauth2/code/kakao",
+                            "http://madi.hufsglobalikelion.co.kr/login/oauth2/code/google"
+
 
                     ));
                     config.setAllowedMethods(Arrays.asList(
