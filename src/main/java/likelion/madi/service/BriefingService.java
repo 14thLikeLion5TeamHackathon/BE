@@ -2,15 +2,13 @@ package likelion.madi.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import likelion.madi.domain.CareCard;
-import likelion.madi.domain.CareCardTreatment;
-import likelion.madi.domain.Schedule;
-import likelion.madi.domain.Treatment;
-import likelion.madi.domain.User;
+import likelion.madi.domain.*;
 import likelion.madi.dto.response.BriefingResponse;
 import likelion.madi.dto.response.WeatherResponseDto;
 import likelion.madi.enums.ConnectionStatus;
+import likelion.madi.repository.BriefingCacheRepository;
 import likelion.madi.repository.CareCardRepository;
+import likelion.madi.repository.CareRecordRepository;
 import likelion.madi.repository.GoogleCalendarConnectionRepository;
 import likelion.madi.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +21,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -62,6 +63,8 @@ public class BriefingService {
     private final GoogleCalendarConnectionRepository calendarConnectionRepository;
     private final WeatherService weatherService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CareRecordRepository careRecordRepository;
+    private final BriefingCacheRepository briefingCacheRepository;
 
     @Value("${openai.api.key}")
     private String openAiApiKey;
@@ -99,8 +102,22 @@ public class BriefingService {
                     .build();
         }
 
-        String prompt = buildPrompt(cards, weather, schedules, date);
-        BriefingResponse.CardJudgement judgement = callOpenAiForJudgement(cards, prompt);
+        LocalDateTime latestRecordAt = cards.stream()
+                .map(careRecordRepository::findTopByCareCardOrderByRecordedAtDesc)
+                .flatMap(Optional::stream)
+                .map(CareRecord::getRecordedAt)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+
+        BriefingResponse.CardJudgement judgement = briefingCacheRepository
+                .findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAt(user, date, city, district, latestRecordAt)
+                .map(this::toCardJudgement)
+                .orElseGet(() -> {
+                    String prompt = buildPrompt(cards, weather, schedules, date);
+                    BriefingResponse.CardJudgement generated = callOpenAiForJudgement(cards, prompt);
+                    saveCache(user, date, city, district, latestRecordAt, generated);
+                    return generated;
+                });
 
         return BriefingResponse.builder()
                 .date(date.toString())
@@ -109,6 +126,48 @@ public class BriefingService {
                 .overallCautionLevel(judgement.getCautionLevel())
                 .calendarConnected(calendarConnected)
                 .build();
+    }
+
+    private BriefingResponse.CardJudgement toCardJudgement(BriefingCache cache) {
+        List<Long> cardIds = cache.getCardIds().isBlank()
+                ? List.of()
+                : java.util.Arrays.stream(cache.getCardIds().split(","))
+                        .map(Long::parseLong)
+                        .toList();
+
+        List<String> reasons = cache.getReasons().isBlank()
+                ? List.of()
+                : java.util.Arrays.asList(cache.getReasons().split(","));
+
+        return BriefingResponse.CardJudgement.builder()
+                .cardIds(cardIds)
+                .actionSentence(cache.getActionSentence())
+                .cautionLevel(cache.getCautionLevel())
+                .reasons(reasons)
+                .build();
+    }
+
+    private void saveCache(User user, LocalDate date, String city, String district, LocalDateTime latestRecordAt,
+                            BriefingResponse.CardJudgement judgement) {
+        String cardIds = judgement.getCardIds().stream()
+                .map(String::valueOf)
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+        String reasons = String.join(",", judgement.getReasons());
+
+        briefingCacheRepository.save(
+                BriefingCache.builder()
+                        .user(user)
+                        .targetDate(date)
+                        .city(city)
+                        .district(district)
+                        .latestRecordAt(latestRecordAt)
+                        .cardIds(cardIds)
+                        .actionSentence(judgement.getActionSentence())
+                        .cautionLevel(judgement.getCautionLevel())
+                        .reasons(reasons)
+                        .build()
+        );
     }
 
     private String buildPrompt(List<CareCard> cards, WeatherResponseDto weather,
@@ -123,6 +182,17 @@ public class BriefingService {
                     : primary.getCustomName();
             int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), date);
             sb.append("- ").append(treatmentName).append(" D+").append(dDay).append("\n");
+
+            careRecordRepository.findTopByCareCardOrderByRecordedAtDesc(card).ifPresent(record -> {
+                sb.append("  최근 기록: ");
+                for (CareRecordTag tag : record.getTags()) {
+                    sb.append(tag.getStatusTag().getName()).append(" 강도").append(tag.getIntensity()).append(" ");
+                }
+                if (record.getStatusDescription() != null && !record.getStatusDescription().isBlank()) {
+                    sb.append("(메모: ").append(record.getStatusDescription()).append(")");
+                }
+                sb.append("\n");
+            });
         }
 
         sb.append("\n오늘(").append(date).append(") 날씨: ")
