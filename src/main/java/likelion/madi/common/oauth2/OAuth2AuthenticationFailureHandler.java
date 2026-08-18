@@ -3,6 +3,7 @@ package likelion.madi.common.oauth2;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
@@ -13,13 +14,22 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class OAuth2AuthenticationFailureHandler implements AuthenticationFailureHandler {
-    @Value("${app.oauth2.failure-redirect-uri:http://localhost:3000/login?error=oauth2_failure}")
-    private String failureRedirectUri;
+
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
+
+    // 로그인 시작 시 redirect_uri 파라미터가 없거나 화이트리스트 밖일 때 쓰는 기본값
+    @Value("${app.oauth2.authorized-redirect-uris}")
+    private List<String> authorizedRedirectUris;
+
+    @Value("${app.oauth2.failure-redirect-path:/login}")
+    private String failureRedirectPath;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
@@ -36,6 +46,10 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
                 && oauth2Exception.getError() != null)
                 ? oauth2Exception.getError().getErrorCode()
                 : "oauth2_failure";
+
+        String redirectOrigin = authorizationRequestRepository.getRedirectUri(request)
+                .orElseGet(() -> authorizedRedirectUris.get(0));
+        String failureRedirectUri = redirectOrigin + failureRedirectPath;
 
         String redirectUrl = UriComponentsBuilder.fromUriString(failureRedirectUri)
                 .replaceQueryParam("error", errorCode)

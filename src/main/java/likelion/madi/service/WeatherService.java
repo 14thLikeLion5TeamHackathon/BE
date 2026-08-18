@@ -3,7 +3,6 @@ package likelion.madi.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import likelion.madi.common.exception.BadRequestException;
-import likelion.madi.common.response.ErrorStatus;
 import likelion.madi.common.util.KstDate;
 import likelion.madi.domain.RegionMapper;
 import likelion.madi.domain.Weather;
@@ -16,8 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.time.LocalDate;
@@ -34,7 +31,6 @@ public class WeatherService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // 🌟 OpenWeatherMap 5일 예보 지원 범위 (오늘 포함 최대 5일: 0, 1, 2, 3, 4일 뒤)
-    // 기상청 단기예보(3일) 기준이라면 3으로 변경하시면 됩니다.
     private static final int MAX_FORECAST_DAYS = 5;
 
     @Value("${openweathermap.api.key:1f90a4007ee2683ffb37f7c6786fa299}")
@@ -50,75 +46,73 @@ public class WeatherService {
 
         if (daysDiff < 0 || daysDiff >= MAX_FORECAST_DAYS) {
             log.warn("예보 범위를 벗어난 날짜 요청: requestedDate={}, today={}, daysDiff={}", date, today, daysDiff);
-            // 🌟 ErrorStatus 없이 String 메시지로 바로 던집니다!
             throw new BadRequestException("예보 제공 범위를 벗어난 날짜입니다.");
         }
+    }
+
+    /**
+     * 좌표를 소수점 2자리로 보정하는 메서드 (약 1.1km 격자 단위)
+     * 예: 37.5665 -> 37.57 / 126.9780 -> 126.98
+     */
+    private double roundToTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
     @Transactional
     public WeatherResponseDto getWeather(Double lat, Double lon, String city, String district, LocalDate targetDate) {
         LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
-        // 🌟 1. 날짜 유효성 검증 (과거 또는 예보 범위 초과 시 400 에러)
+        // 🌟 1. 날짜 유효성 검증
         validateForecastRange(date);
 
-        Integer intLat = null;
-        Integer intLon = null;
-
+        // 🌟 2. 위경도(GPS) 좌표가 직접 들어온 경우 -> 소수점 2자리로 보정하여 DB 캐싱 처리
         if (lat != null && lon != null && Math.abs(lat) <= 90.0 && Math.abs(lon) <= 180.0) {
-            intLat = (int) Math.round(lat);
-            intLon = (int) Math.round(lon);
+            double roundedLat = roundToTwoDecimals(lat);
+            double roundedLon = roundToTwoDecimals(lon);
+
+            // 2-1. 소수점 2자리 격자 캐시가 DB에 있는지 먼저 확인 (Cache Hit -> 외부 API 호출 방지)
+            List<Weather> cachedGpsWeather = weatherRepository.findByTargetDateAndLatitudeAndLongitude(date, roundedLat, roundedLon);
+            if (!cachedGpsWeather.isEmpty()) {
+                return new WeatherResponseDto(cachedGpsWeather.get(0));
+            }
+
+            // 2-2. DB에 없으면 외부 API 호출 후 소수점 2자리 좌표로 DB 저장 (Cache Miss)
+            return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, "GPS_USER", "lat_" + roundedLat + "_lon_" + roundedLon, roundedLat, roundedLon, true);
         }
 
-        // 1. 지역명이 제공된 경우 (우선 탐색)
+        // 📍 3. 지역명(city, district)이 제공된 경우
         if (city != null && district != null) {
             List<Weather> cachedWeatherList = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
             if (!cachedWeatherList.isEmpty()) {
-                return new WeatherResponseDto(cachedWeatherList.get(0)); // 💡 중복 중 첫 번째 안전 반환
+                return new WeatherResponseDto(cachedWeatherList.get(0));
             }
 
-            if (intLat == null || intLon == null) {
-                RegionMapper.Coordinate coord = RegionMapper.getCoordinate(city, district);
-                lat = coord.getLat();
-                lon = coord.getLon();
-                intLat = (int) Math.round(lat);
-                intLon = (int) Math.round(lon);
-            }
+            RegionMapper.Coordinate coord = RegionMapper.getCoordinate(city, district);
+            double roundedLat = roundToTwoDecimals(coord.getLat());
+            double roundedLon = roundToTwoDecimals(coord.getLon());
 
-            return callOpenWeatherMapForecastApi(lat, lon, date, city, district, intLat, intLon, true);
+            return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, city, district, roundedLat, roundedLon, true);
         }
 
-        // 2. 위경도(GPS)만 제공된 경우
-        if (intLat != null && intLon != null) {
-            List<Weather> cachedGpsWeatherList = weatherRepository.findByTargetDateAndLatitudeAndLongitude(date, intLat, intLon);
-            if (!cachedGpsWeatherList.isEmpty()) {
-                return new WeatherResponseDto(cachedGpsWeatherList.get(0)); // 💡 중복 중 첫 번째 안전 반환
-            }
-            return callOpenWeatherMapForecastApi(lat, lon, date, "GPS_USER", "lat_" + intLat + "_lon_" + intLon, intLat, intLon, true);
-        }
-
-        // 3. 둘 다 없는 경우 기본값 (서울 중구) 처리
+        // 📍 4. 둘 다 없는 경우 기본값 (서울 중구) 처리
         city = "서울특별시";
         district = "중구";
         RegionMapper.Coordinate defaultCoord = RegionMapper.getCoordinate(city, district);
-        lat = defaultCoord.getLat();
-        lon = defaultCoord.getLon();
-        intLat = (int) Math.round(lat);
-        intLon = (int) Math.round(lon);
+        double roundedLat = roundToTwoDecimals(defaultCoord.getLat());
+        double roundedLon = roundToTwoDecimals(defaultCoord.getLon());
 
         List<Weather> cachedDefaultList = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
         if (!cachedDefaultList.isEmpty()) {
-            return new WeatherResponseDto(cachedDefaultList.get(0)); // 💡 중복 중 첫 번째 안전 반환
+            return new WeatherResponseDto(cachedDefaultList.get(0));
         }
 
-        return callOpenWeatherMapForecastApi(lat, lon, date, city, district, intLat, intLon, true);
+        return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, city, district, roundedLat, roundedLon, true);
     }
 
     @Transactional
     public WeatherResponseDto getWeatherAndEnvironment(LocalDate targetDate, String city, String district) {
         LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
-        // 🌟 1. 날짜 유효성 검증 (과거 또는 예보 범위 초과 시 400 에러)
         validateForecastRange(date);
 
         String targetCity = (city != null) ? city : "서울특별시";
@@ -130,12 +124,15 @@ public class WeatherService {
         }
 
         RegionMapper.Coordinate coord = RegionMapper.getCoordinate(targetCity, targetDistrict);
-        return callOpenWeatherMapForecastApi(coord.getLat(), coord.getLon(), date, targetCity, targetDistrict,
-                (int) Math.round(coord.getLat()), (int) Math.round(coord.getLon()), true);
+        double roundedLat = roundToTwoDecimals(coord.getLat());
+        double roundedLon = roundToTwoDecimals(coord.getLon());
+
+        return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, targetCity, targetDistrict,
+                roundedLat, roundedLon, true);
     }
 
     private WeatherResponseDto callOpenWeatherMapForecastApi(double lat, double lon, LocalDate targetDate,
-                                                             String city, String district, Integer intLat, Integer intLon, boolean shouldSaveDb) {
+                                                             String city, String district, Double latToSave, Double lonToSave, boolean shouldSaveDb) {
 
         URI uri = UriComponentsBuilder.fromUriString("https://api.openweathermap.org")
                 .path("/data/2.5/forecast")
@@ -207,8 +204,8 @@ public class WeatherService {
                     .targetDate(targetDate)
                     .city(city != null ? city : "GPS_USER")
                     .district(district != null ? district : "UNKNOWN")
-                    .latitude(intLat)
-                    .longitude(intLon)
+                    .latitude(latToSave)   // 🌟 Double 소수점 2자리 저장
+                    .longitude(lonToSave) // 🌟 Double 소수점 2자리 저장
                     .temperature(finalTemp)
                     .weatherCondition(finalCondition)
                     .pm10Status(finalPm10Status)
