@@ -80,16 +80,6 @@ public class BriefingService {
                 .filter(card -> isInProgress(card, date))
                 .toList();
 
-        BriefingResponse.WeatherInfo weatherInfo = BriefingResponse.WeatherInfo.builder()
-                .temp(parseTemperature(weather.getTemperature()))
-                .condition(weather.getWeatherCondition())
-                .build();
-
-        BriefingResponse.EnvironmentInfo environmentInfo = BriefingResponse.EnvironmentInfo.builder()
-                .uv(BriefingResponse.LevelValue.builder().level(weather.getUvIndex()).value(0).build())
-                .dust(BriefingResponse.LevelValue.builder().level(weather.getPm10Status()).value(0).build())
-                .build();
-
         List<BriefingResponse.ScheduleItem> scheduleItems = schedules.stream()
                 .map(s -> BriefingResponse.ScheduleItem.builder()
                         .scheduleId(s.getScheduleId())
@@ -102,8 +92,6 @@ public class BriefingService {
         if (cards.isEmpty()) {
             return BriefingResponse.builder()
                     .date(date.toString())
-                    .weather(weatherInfo)
-                    .environment(environmentInfo)
                     .schedules(scheduleItems)
                     .cardJudgement(null)
                     .overallCautionLevel(null)
@@ -116,8 +104,6 @@ public class BriefingService {
 
         return BriefingResponse.builder()
                 .date(date.toString())
-                .weather(weatherInfo)
-                .environment(environmentInfo)
                 .schedules(scheduleItems)
                 .cardJudgement(judgement)
                 .overallCautionLevel(judgement.getCautionLevel())
@@ -198,17 +184,6 @@ public class BriefingService {
                     .cautionLevel("낮음")
                     .reasons(List.of())
                     .build();
-        }
-    }
-
-    private double parseTemperature(String temperature) {
-        if (temperature == null) {
-            return 0.0;
-        }
-        try {
-            return Double.parseDouble(temperature);
-        } catch (NumberFormatException e) {
-            return 0.0;
         }
     }
 
