@@ -31,5 +31,7 @@ jobs:
             set_env OPENAI_API_KEY "${{ secrets.OPENAI_API_KEY }}"
             set_env GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
             set_env GOOGLE_CLIENT_SECRET "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+            set_env KAKAO_CLIENT_ID "${{ secrets.KAKAO_CLIENT_ID }}"
+            set_env KAKAO_CLIENT_SECRET "${{ secrets.KAKAO_CLIENT_SECRET }}"
             docker compose up -d --build
             docker image prune -f
