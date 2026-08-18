@@ -12,6 +12,8 @@ import likelion.madi.dto.request.KakaoNotificationConnectRequest;
 import likelion.madi.dto.request.KakaoNotificationRequest;
 import likelion.madi.dto.response.KakaoNotificationResponse;
 import likelion.madi.dto.response.KakaoTokenResponse;
+import likelion.madi.dto.response.TodayChecklistResponse;
+import likelion.madi.dto.response.BriefingResponse;
 import likelion.madi.repository.CareCardRepository;
 import likelion.madi.repository.KakaoNotificationRepository;
 import likelion.madi.repository.UserRepository;
@@ -25,6 +27,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
+import static org.springframework.core.NestedExceptionUtils.buildMessage;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,7 +38,8 @@ public class NotificationService {
     private final CareCardRepository careCardRepository;
     private final KakaoOAuthClient kakaoOAuthClient;
     private final KakaoMessageClient kakaoMessageClient;
-    private final TodayCareService todayCareService;
+    private final TodayChecklistService todayChecklistService;
+    private final BriefingService briefingService;
     private final RiskWarningService riskWarningService;
 
     @Transactional
@@ -76,7 +81,7 @@ public class NotificationService {
     }
 
     @Transactional
-    public void sendKakaoMessage(Long userId, String city, String district) {
+    public void sendKakaoMessage(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
 
@@ -84,16 +89,16 @@ public class NotificationService {
                 .filter(KakaoNotification::getConsent)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_KAKAO_NOTIFICATION));
 
-        CareCard activeCard = careCardRepository.findByUser(user).stream()
-                .filter(this::isInProgress)
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CARE_CARD));
+        LocalDate today = KstDate.today();
 
-        CareCardTreatment primary = activeCard.getTreatments().get(0);
-        Treatment treatment = primary.getTreatment();
-        int dDay = (int) ChronoUnit.DAYS.between(activeCard.getTreatmentDate(), KstDate.today());
+        TodayChecklistResponse checklist = todayChecklistService.getTodayChecklist(userId, today);
+        BriefingResponse briefing = briefingService.getBriefing(user, today, user.getCity(), user.getDistrict());
 
-        String message = todayCareService.generateOrGetTodayCare(activeCard, treatment, dDay, city, district);
+        if (briefing.getCardJudgement() == null && checklist.getItems().isEmpty()) {
+            return;
+        }
+
+        String message = buildMessage(checklist, briefing);
 
         try {
             kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
@@ -139,15 +144,24 @@ public class NotificationService {
         }
     }
 
-    // 진행중인 카드인지 판단 (회복 총 기간을 넘지 않았는지)
-    private boolean isInProgress(CareCard card) {
-        CareCardTreatment primary = card.getTreatments().get(0);
-        Treatment treatment = primary.getTreatment();
-        if (treatment == null || treatment.getRecoveryTotalDays() == null) {
-            return true;
+    private String buildMessage(TodayChecklistResponse checklist, BriefingResponse briefing) {
+        StringBuilder sb = new StringBuilder();
+
+        if (briefing.getCardJudgement() != null) {
+            sb.append(briefing.getCardJudgement().getActionSentence());
         }
-        int dDay = (int) ChronoUnit.DAYS.between(card.getTreatmentDate(), KstDate.today());
-        return dDay <= treatment.getRecoveryTotalDays();
+
+        if (!checklist.getItems().isEmpty()) {
+            if (!sb.isEmpty()) {
+                sb.append("\n\n");
+            }
+            sb.append("오늘의 체크리스트:\n");
+            for (TodayChecklistResponse.Item item : checklist.getItems()) {
+                sb.append("- ").append(item.getLabel()).append("\n");
+            }
+        }
+
+        return sb.toString().trim();
     }
 
     @Transactional
