@@ -51,7 +51,8 @@ public class SecurityConfig {
                             "http://43.200.244.214:8080/login/oauth2/code/kakao",
                             "http://43.200.244.214:8080/login/oauth2/code/google",
                             "http://localhost:5173",
-                            "http://localhost:5174"
+                            "http://localhost:5174",
+                            "https://madi-eta.vercel.app"
                     ));
                     config.setAllowedMethods(Arrays.asList(
                             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"

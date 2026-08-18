@@ -1,6 +1,7 @@
 package likelion.madi.common.oauth2;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -24,9 +25,11 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final HttpCookieOAuth2AuthorizationRequestRepository authorizationRequestRepository;
 
-    @Value("${app.oauth2.authorized-redirect-uri:http://localhost:3000}")
-    private String redirectUri;
+    // 로그인 시작 시 redirect_uri 파라미터가 없거나 화이트리스트 밖일 때 쓰는 기본값 (목록의 첫 번째 주소).
+    @Value("${app.oauth2.authorized-redirect-uris}")
+    private List<String> authorizedRedirectUris;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -50,6 +53,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         userRepository.save(user);
 
         log.info("OAuth2 인증 성공, 토큰 발급 완료 - userId: {}", user.getUserId());
+
+        String redirectUri = authorizationRequestRepository.getRedirectUri(request)
+                .orElseGet(() -> authorizedRedirectUris.get(0));
 
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("token", accessToken)
