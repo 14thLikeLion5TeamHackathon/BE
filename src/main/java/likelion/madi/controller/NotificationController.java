@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -55,23 +54,6 @@ public class NotificationController {
                         SuccessStatus.KAKAO_NOTIFICATION_CONNECT_SUCCESS.getStatusCode(),
                         SuccessStatus.KAKAO_NOTIFICATION_CONNECT_SUCCESS.getMessage(),
                         result
-                )
-        );
-    }
-
-    @Operation(summary = "카카오 알림 메시지 발송")
-    @PostMapping("/kakao/send")
-    public ResponseEntity<ApiResponse<Void>> sendKakaoMessage(
-            @AuthenticationPrincipal Long userId,
-            @RequestParam("city") String city,
-            @RequestParam("district") String district
-    ) {
-        notificationService.sendKakaoMessage(userId, city, district);
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        SuccessStatus.KAKAO_MESSAGE_SEND_SUCCESS.getStatusCode(),
-                        SuccessStatus.KAKAO_MESSAGE_SEND_SUCCESS.getMessage(),
-                        null
                 )
         );
     }

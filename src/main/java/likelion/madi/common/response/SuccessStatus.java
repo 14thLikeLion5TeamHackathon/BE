@@ -41,7 +41,6 @@ public enum SuccessStatus {
     AI_FEEDBACK_GET_SUCCESS(HttpStatus.OK, "AI 피드백 조회 성공"),
     RECOVERY_TIMELINE_GET_SUCCESS(HttpStatus.OK, "회복 타임라인 조회 성공"),
 
-    KAKAO_MESSAGE_SEND_SUCCESS(HttpStatus.OK, "카카오 알림 메시지 발송 성공"),
     BRIEFING_GET_SUCCESS(HttpStatus.OK, "관리 행동 브리핑 조회 성공"),
 
     LOCATION_UPDATE_SUCCESS(HttpStatus.OK, "위치 정보 저장 성공"),
