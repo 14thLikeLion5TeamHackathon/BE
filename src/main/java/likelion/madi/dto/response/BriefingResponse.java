@@ -12,42 +12,20 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BriefingResponse {
     private String date;
-    private WeatherInfo weather;
-    private EnvironmentInfo environment;
     private List<ScheduleItem> schedules;
     private CardJudgement cardJudgement;
     private String overallCautionLevel;
     private boolean calendarConnected;
 
     @Builder
-    public BriefingResponse(String date, WeatherInfo weather, EnvironmentInfo environment,
+    public BriefingResponse(String date,
                              List<ScheduleItem> schedules, CardJudgement cardJudgement,
                              String overallCautionLevel, boolean calendarConnected) {
         this.date = date;
-        this.weather = weather;
-        this.environment = environment;
         this.schedules = schedules;
         this.cardJudgement = cardJudgement;
         this.overallCautionLevel = overallCautionLevel;
         this.calendarConnected = calendarConnected;
-    }
-
-    @Getter @Builder @NoArgsConstructor(access = AccessLevel.PROTECTED) @AllArgsConstructor
-    public static class WeatherInfo {
-        private double temp;
-        private String condition;
-    }
-
-    @Getter @Builder @NoArgsConstructor(access = AccessLevel.PROTECTED) @AllArgsConstructor
-    public static class EnvironmentInfo {
-        private LevelValue uv;
-        private LevelValue dust;
-    }
-
-    @Getter @Builder @NoArgsConstructor(access = AccessLevel.PROTECTED) @AllArgsConstructor
-    public static class LevelValue {
-        private String level;
-        private int value;
     }
 
     @Getter @Builder @NoArgsConstructor(access = AccessLevel.PROTECTED) @AllArgsConstructor
