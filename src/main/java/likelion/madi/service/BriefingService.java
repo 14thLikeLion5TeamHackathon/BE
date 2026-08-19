@@ -18,6 +18,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
@@ -69,6 +71,9 @@ public class BriefingService {
     @Value("${openai.api.key}")
     private String openAiApiKey;
 
+    // 발송/조회 쪽에서 나중에 예외가 나서 그 트랜잭션이 롤백되더라도, 방금 생성한 캐시(특히 OpenAI 호출 결과)까지
+    // 같이 날아가지 않도록 별도 트랜잭션으로 분리
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BriefingResponse getBriefing(User user, LocalDate date, String city, String district) {
         WeatherResponseDto weather = weatherService.getWeatherAndEnvironment(date, city, district);
 

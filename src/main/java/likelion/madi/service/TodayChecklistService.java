@@ -28,6 +28,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
@@ -99,8 +100,8 @@ public class TodayChecklistService {
     @Value("${openai.api.key}")
     private String openAiApiKey;
 
-    // 조회
-    @Transactional
+    // 조회. 호출부(예: 카카오 발송)의 트랜잭션이 나중에 롤백되더라도 여기서 생성한 체크리스트는 별도 트랜잭션으로 유지
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TodayChecklistResponse getTodayChecklist(Long userId, LocalDate date) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
