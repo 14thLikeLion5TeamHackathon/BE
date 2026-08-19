@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,6 +40,22 @@ public class TodayController {
     ) {
         Long userId = (Long) authentication.getPrincipal();
         TodayChecklistResponse result = todayChecklistService.getTodayChecklist(
+                userId, date != null ? date : KstDate.today());
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessStatus.CHECKLIST_GET_SUCCESS.getStatusCode(),
+                SuccessStatus.CHECKLIST_GET_SUCCESS.getMessage(),
+                result
+        ));
+    }
+
+    @Operation(summary = "오늘의 체크리스트 새로고침", description = "오늘자 체크리스트를 지우고 현재 위치·일정·케어카드·케어기록 기준으로 다시 생성합니다.")
+    @PostMapping("/checklist/refresh")
+    public ResponseEntity<ApiResponse<TodayChecklistResponse>> refreshTodayChecklist(
+            Authentication authentication,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+        TodayChecklistResponse result = todayChecklistService.refreshTodayChecklist(
                 userId, date != null ? date : KstDate.today());
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessStatus.CHECKLIST_GET_SUCCESS.getStatusCode(),
