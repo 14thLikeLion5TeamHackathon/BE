@@ -2,6 +2,7 @@ package likelion.madi.dto.response;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.media.Schema;
 import likelion.madi.domain.AiFeedback;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -17,19 +18,33 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AiFeedbackResponse {
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long feedbackId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long recordId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long cardId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String treatmentName;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer dDay;
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "이전 기록이 없으면 null")
     private ComparisonInfo comparison;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String analysisSummary;
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "분석 태그가 없으면 null")
     private AnalysisTags analysisTags;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String intensityReview;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private List<String> todayCare;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean needsConsultation;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String consultationMessage;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String consultationCriteria;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createdAt;
 
     @Builder

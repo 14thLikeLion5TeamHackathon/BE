@@ -1,6 +1,7 @@
 package likelion.madi.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import likelion.madi.domain.Weather;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,16 +11,24 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class WeatherResponseDto {
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String targetDate;
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "위치를 특정할 수 없으면 null")
     private String city;
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "위치를 특정할 수 없으면 null")
     private String district;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String temperature;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String weatherCondition;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String uvIndex;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String pm10Status;
 
     // 💡 누락되었던 미세먼지 정수 수치 필드 추가 (@JsonProperty로 스네이크 케이스 강제 매핑)
     @JsonProperty("pm10_value")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer pm10Value;
 
     @Builder
