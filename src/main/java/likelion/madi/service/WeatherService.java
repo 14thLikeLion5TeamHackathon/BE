@@ -20,6 +20,7 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Random;
 
 @Slf4j
 @Service
@@ -29,6 +30,7 @@ public class WeatherService {
     private final WeatherRepository weatherRepository;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final Random random = new Random();
 
     // 🌟 OpenWeatherMap 5일 예보 지원 범위 (오늘 포함 최대 5일: 0, 1, 2, 3, 4일 뒤)
     private static final int MAX_FORECAST_DAYS = 5;
@@ -56,6 +58,36 @@ public class WeatherService {
      */
     private double roundToTwoDecimals(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    /**
+     * 🌟 날씨 상태(맑음, 구름, 비 등)에 따라 현실적인 자외선 등급을 가중치 기반으로 산출
+     */
+    private String calculateUvIndex(String weatherCondition) {
+        if (weatherCondition == null || weatherCondition.isBlank()) {
+            return "보통";
+        }
+
+        String condition = weatherCondition.toLowerCase();
+        int randomChance = random.nextInt(100); // 0 ~ 99 난수
+
+        // 1. 비 / 눈 / 소나기 / 안개 -> 90% "낮음", 10% "보통"
+        if (condition.contains("비") || condition.contains("눈") || condition.contains("소나기")
+                || condition.contains("rain") || condition.contains("snow") || condition.contains("mist") || condition.contains("drizzle")) {
+            return (randomChance < 90) ? "낮음" : "보통";
+        }
+
+        // 2. 구름 / 흐림 -> 70% "보통", 30% "낮음"
+        if (condition.contains("구름") || condition.contains("흐림") || condition.contains("cloud") || condition.contains("overcast")) {
+            return (randomChance < 70) ? "보통" : "낮음";
+        }
+
+        // 3. 맑음 -> 여름철 기준 70% "높음", 30% "매우 높음"
+        if (condition.contains("맑음") || condition.contains("clear")) {
+            return (randomChance < 70) ? "높음" : "매우 높음";
+        }
+
+        return "보통";
     }
 
     @Transactional
@@ -193,7 +225,9 @@ public class WeatherService {
 
         String finalTemp = (tempVal != null) ? String.valueOf(tempVal) : "25.0";
         String finalCondition = (weatherCondition != null && !weatherCondition.isEmpty()) ? weatherCondition : "맑음";
-        String finalUvIndex = "보통";
+
+        // 🌟 [수정 완료] 날씨 상태(finalCondition)에 맞춰 자외선 등급 자동 산출
+        String finalUvIndex = calculateUvIndex(finalCondition);
 
         // 8월 여름철 미세먼지 랜덤 범위(15~45)
         int finalPm10Value = (int) (Math.random() * 31) + 15;
