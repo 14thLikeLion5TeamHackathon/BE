@@ -9,7 +9,9 @@ import likelion.madi.domain.AiFeedback;
 import likelion.madi.domain.CareCard;
 import likelion.madi.domain.CareCardTreatment;
 import likelion.madi.domain.CareChecklist;
+import likelion.madi.domain.CareRecord;
 import likelion.madi.domain.CareRecordTag;
+import likelion.madi.domain.ChecklistGenerationContext;
 import likelion.madi.domain.RecoveryGuide;
 import likelion.madi.domain.Treatment;
 import likelion.madi.domain.User;
@@ -19,6 +21,7 @@ import likelion.madi.repository.AiFeedbackRepository;
 import likelion.madi.repository.CareCardRepository;
 import likelion.madi.repository.CareChecklistRepository;
 import likelion.madi.repository.CareRecordRepository;
+import likelion.madi.repository.ChecklistGenerationContextRepository;
 import likelion.madi.repository.RecoveryGuideRepository;
 import likelion.madi.repository.ScheduleRepository;
 import likelion.madi.repository.UserRepository;
@@ -35,13 +38,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -126,6 +132,7 @@ public class TodayChecklistService {
     private final AiFeedbackRepository aiFeedbackRepository;
     private final RecoveryGuideRepository recoveryGuideRepository;
     private final ScheduleRepository scheduleRepository;
+    private final ChecklistGenerationContextRepository checklistGenerationContextRepository;
     private final WeatherService weatherService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -137,7 +144,10 @@ public class TodayChecklistService {
     public TodayChecklistResponse getTodayChecklist(Long userId, LocalDate date) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+        return buildTodayChecklistResponse(user, date);
+    }
 
+    private TodayChecklistResponse buildTodayChecklistResponse(User user, LocalDate date) {
         List<CareCard> careCards = careCardRepository.findByUser(user);
 
         // 진행 중인 케어카드가 없으면(온보딩 직후 등) 일정+날씨 기반 체크리스트로 대체. 카드가 생기는 순간
@@ -180,7 +190,6 @@ public class TodayChecklistService {
                 .items(visibleItems)
                 .build();
     }
-
     // 케어카드의 현재 상태 긴급도 점수: AI가 병원 문의를 권고했으면 최우선, 아니면 최근 기록의 증상 강도(0~3) 중 최댓값, 기록이 없으면 0
     private int computeUrgencyScore(CareCard careCard) {
         return careRecordRepository.findTopByCareCardOrderByRecordedAtDesc(careCard)
@@ -519,5 +528,59 @@ public class TodayChecklistService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+    }
+
+    // 새로고침: 위치·카드·기록·일정 중 실제로 바뀐 게 있을 때만 지우고 재생성. 아무것도 안 바뀌었으면
+    // 기존 체크리스트(사용자가 이미 체크해뒀을 수 있는)를 그대로 유지한다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public TodayChecklistResponse refreshTodayChecklist(Long userId, LocalDate date) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        List<CareCard> careCards = careCardRepository.findByUser(user);
+
+        String cardIds = careCards.stream()
+                .map(CareCard::getCardId)
+                .map(String::valueOf)
+                .sorted()
+                .collect(Collectors.joining(","));
+
+        LocalDateTime latestRecordAt = careCards.stream()
+                .map(careRecordRepository::findTopByCareCardOrderByRecordedAtDesc)
+                .flatMap(Optional::stream)
+                .map(CareRecord::getRecordedAt)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+
+        List<Schedule> schedules = scheduleRepository.findByUserAndEventDate(user, date);
+        String scheduleSignature = schedules.stream()
+                .map(s -> s.getScheduleId() + ":" + s.getTitle() + ":" + s.getEventTime() + ":" + s.getLocation())
+                .sorted()
+                .collect(Collectors.joining(","));
+
+        Optional<ChecklistGenerationContext> lastContext =
+                checklistGenerationContextRepository.findTopByUserAndTargetDateOrderByIdDesc(user, date);
+
+        boolean changed = lastContext.isEmpty()
+                || !lastContext.get().matches(user.getCity(), user.getDistrict(), latestRecordAt, cardIds, scheduleSignature);
+
+        if (changed) {
+            if (!careCards.isEmpty()) {
+                careChecklistRepository.deleteByCareCardInAndCheckDate(careCards, date);
+            }
+            careChecklistRepository.deleteByUserAndCareCardIsNullAndCheckDate(user, date);
+
+            checklistGenerationContextRepository.save(ChecklistGenerationContext.builder()
+                    .user(user)
+                    .targetDate(date)
+                    .city(user.getCity())
+                    .district(user.getDistrict())
+                    .latestRecordAt(latestRecordAt)
+                    .cardIds(cardIds)
+                    .scheduleSignature(scheduleSignature)
+                    .build());
+        }
+
+        return buildTodayChecklistResponse(user, date);
     }
 }

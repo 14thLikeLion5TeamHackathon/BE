@@ -18,4 +18,7 @@ public interface CareChecklistRepository extends JpaRepository<CareChecklist, Lo
 
     // 회원탈퇴 시 user_id 외래키 제약으로 유저 삭제가 막히지 않도록, 카드 없이 user에 직접 연결된 항목을 정리
     void deleteByUser(User user);
+
+    void deleteByCareCardInAndCheckDate(List<CareCard> careCards, LocalDate checkDate);
+    void deleteByUserAndCareCardIsNullAndCheckDate(User user, LocalDate checkDate);
 }
