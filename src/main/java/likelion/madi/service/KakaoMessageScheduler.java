@@ -16,7 +16,7 @@ public class KakaoMessageScheduler {
     private final KakaoNotificationRepository kakaoNotificationRepository;
     private final NotificationService notificationService;
 
-    @Scheduled(cron = "0 0 9,12,15 * * *")
+    @Scheduled(cron = "0 0 9,12,15 * * *", zone = "Asia/Seoul")
     public void sendDailyKakaoMessages() {
         List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
         for (KakaoNotification notification : notifications) {
@@ -29,12 +29,12 @@ public class KakaoMessageScheduler {
         }
     }
 
-    @Scheduled(cron = "0 0 21 * * *")
+    @Scheduled(cron = "0 0 21 * * *", zone = "Asia/Seoul")
     public void sendDailyRecordReminders() {
         notificationService.sendRecordReminder();
     }
 
-    @Scheduled(cron = "0 0 21 * * *")
+    @Scheduled(cron = "0 0 21 * * *", zone = "Asia/Seoul")
     public void sendDailyRiskWarnings() {
         notificationService.sendRiskWarnings();
     }
