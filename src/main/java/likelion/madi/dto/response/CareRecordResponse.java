@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import likelion.madi.domain.CareRecord;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -15,12 +16,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CareRecordResponse {
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long recordId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long cardId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private List<String> photoUrls;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String statusDescription;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer dDay;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime recordedAt;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Map<String, Integer> tags;
 
     @Builder

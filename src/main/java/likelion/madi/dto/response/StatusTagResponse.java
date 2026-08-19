@@ -1,5 +1,6 @@
 package likelion.madi.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import likelion.madi.domain.StatusTag;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -10,8 +11,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StatusTagResponse {
 
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long tagId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String name;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String code;
 
     @Builder

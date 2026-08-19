@@ -1,5 +1,6 @@
 package likelion.madi.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import likelion.madi.domain.Treatment;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -9,11 +10,17 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TreatmentResponse {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long treatmentId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String name;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String category;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private String description;
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "연계된 매장이 없으면 null")
     private String storeName;
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "연계된 매장이 없으면 null")
     private String storeLocation;
 
     @Builder
