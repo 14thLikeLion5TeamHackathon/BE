@@ -10,6 +10,6 @@ import java.util.Optional;
 
 public interface BriefingCacheRepository extends JpaRepository<BriefingCache, Long> {
 
-    Optional<BriefingCache> findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAt(
-            User user, LocalDate targetDate, String city, String district, LocalDateTime latestRecordAt);
+    Optional<BriefingCache> findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAtAndCardIds(
+            User user, LocalDate targetDate, String city, String district, LocalDateTime latestRecordAt, String cardIds);
 }

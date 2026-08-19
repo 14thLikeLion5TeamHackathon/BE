@@ -114,13 +114,19 @@ public class BriefingService {
                 .max(Comparator.naturalOrder())
                 .orElse(null);
 
+        String cardIdsKey = cards.stream()
+                .map(CareCard::getCardId)
+                .map(String::valueOf)
+                .reduce((a, b) -> a + "," + b)
+                .orElse("");
+
         BriefingResponse.CardJudgement judgement = briefingCacheRepository
-                .findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAt(user, date, city, district, latestRecordAt)
+                .findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAtAndCardIds(user, date, city, district, latestRecordAt, cardIdsKey)
                 .map(this::toCardJudgement)
                 .orElseGet(() -> {
                     String prompt = buildPrompt(cards, weather, schedules, date);
                     BriefingResponse.CardJudgement generated = callOpenAiForJudgement(cards, prompt);
-                    saveCache(user, date, city, district, latestRecordAt, generated);
+                    saveCache(user, date, city, district, latestRecordAt, cardIdsKey, generated);
                     return generated;
                 });
 
@@ -153,11 +159,7 @@ public class BriefingService {
     }
 
     private void saveCache(User user, LocalDate date, String city, String district, LocalDateTime latestRecordAt,
-                            BriefingResponse.CardJudgement judgement) {
-        String cardIds = judgement.getCardIds().stream()
-                .map(String::valueOf)
-                .reduce((a, b) -> a + "," + b)
-                .orElse("");
+                            String cardIds, BriefingResponse.CardJudgement judgement) {
         String reasons = String.join(",", judgement.getReasons());
 
         briefingCacheRepository.save(
