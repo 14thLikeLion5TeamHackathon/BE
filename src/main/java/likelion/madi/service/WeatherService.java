@@ -35,11 +35,10 @@ public class WeatherService {
     // 🌟 OpenWeatherMap 5일 예보 지원 범위 (오늘 포함 최대 5일: 0, 1, 2, 3, 4일 뒤)
     private static final int MAX_FORECAST_DAYS = 5;
 
-<<<<<<< HEAD
+
     @Value("${openweathermap.api.key}")
-=======
-    @Value("${openweathermap.service.key}")
->>>>>>> develop
+
+
     private String apiKey;
 
     /**
