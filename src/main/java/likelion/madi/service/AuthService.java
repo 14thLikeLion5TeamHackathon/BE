@@ -73,6 +73,7 @@ public class AuthService {
                 request.getAgreePersonalInfo(),
                 request.getAgreeHealthData(),
                 request.getAgreeCalendarData(),
+                request.getAgreeKakaoNotification(),
                 request.getHasAacOfflineExperience()
         );
 

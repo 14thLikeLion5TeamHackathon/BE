@@ -28,11 +28,14 @@ public class UserInfoResponse {
     private Boolean agreeHealthData;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean agreeCalendarData;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+    private Boolean agreeKakaoNotification;
 
     @Builder
     public UserInfoResponse(Long userId, String name, LocalDate birthDate, String gender,
                             Boolean hasAacOfflineExperience, Boolean agreePersonalInfo,
-                            Boolean agreeHealthData, Boolean agreeCalendarData) {
+                            Boolean agreeHealthData, Boolean agreeCalendarData,
+                            Boolean agreeKakaoNotification) {
         this.userId = userId;
         this.name = name;
         this.birthDate = birthDate;
@@ -41,6 +44,7 @@ public class UserInfoResponse {
         this.agreePersonalInfo = agreePersonalInfo;
         this.agreeHealthData = agreeHealthData;
         this.agreeCalendarData = agreeCalendarData;
+        this.agreeKakaoNotification = agreeKakaoNotification;
     }
 
     public static UserInfoResponse from(User user) {
@@ -53,6 +57,7 @@ public class UserInfoResponse {
                 .agreePersonalInfo(user.getAgreePersonalInfo())
                 .agreeHealthData(user.getAgreeHealthData())
                 .agreeCalendarData(user.getAgreeCalendarData())
+                .agreeKakaoNotification(user.getAgreeKakaoNotification())
                 .build();
     }
 }
