@@ -15,4 +15,7 @@ public interface CareChecklistRepository extends JpaRepository<CareChecklist, Lo
 
     // 카드가 없을 때(일정+날씨 기반) 생성된 항목 조회용
     List<CareChecklist> findByUserAndCareCardIsNullAndCheckDate(User user, LocalDate checkDate);
+
+    // 회원탈퇴 시 user_id 외래키 제약으로 유저 삭제가 막히지 않도록, 카드 없이 user에 직접 연결된 항목을 정리
+    void deleteByUser(User user);
 }

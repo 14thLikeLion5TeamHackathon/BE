@@ -10,10 +10,7 @@ import likelion.madi.dto.request.UserUpdateRequest;
 import likelion.madi.dto.request.UserLocationUpdateRequest;
 import likelion.madi.dto.response.UserIdResponse;
 import likelion.madi.dto.response.UserInfoResponse;
-import likelion.madi.repository.GoogleCalendarConnectionRepository;
-import likelion.madi.repository.BlacklistedTokenRepository;
-import likelion.madi.repository.KakaoNotificationRepository;
-import likelion.madi.repository.UserRepository;
+import likelion.madi.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +32,7 @@ public class MypageService {
     private final JwtService jwtService;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final NominatimClient nominatimClient;
+    private final CareChecklistRepository careChecklistRepository;
 
     @Transactional(readOnly = true)
     public UserInfoResponse getUserInfo(Long userId) {
@@ -100,6 +98,8 @@ public class MypageService {
                 log.warn("구글 연결 해제 실패 - userId: {}, error: {}", userId, e.getMessage());
             }
         });
+
+        careChecklistRepository.deleteByUser(user);
 
         userRepository.delete(user);
     }
