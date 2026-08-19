@@ -44,6 +44,9 @@ public class User {
     @Column(name = "agree_calendar_data")
     private Boolean agreeCalendarData;
 
+    @Column(name = "agree_kakao_notification")
+    private Boolean agreeKakaoNotification;
+
     @Column(name = "has_aac_offline_experience")
     private Boolean hasAacOfflineExperience;
 
@@ -85,13 +88,15 @@ public class User {
 
     public void completeOnboarding(String name, LocalDate birthDate, String gender,
                                     Boolean agreePersonalInfo, Boolean agreeHealthData,
-                                    Boolean agreeCalendarData, Boolean hasAacOfflineExperience) {
+                                    Boolean agreeCalendarData, Boolean agreeKakaoNotification,
+                                    Boolean hasAacOfflineExperience) {
         this.name = name;
         this.birthDate = birthDate;
         this.gender = gender;
         this.agreePersonalInfo = agreePersonalInfo;
         this.agreeHealthData = agreeHealthData;
         this.agreeCalendarData = agreeCalendarData;
+        this.agreeKakaoNotification = agreeKakaoNotification;
         this.hasAacOfflineExperience = hasAacOfflineExperience;
     }
 

@@ -32,7 +32,7 @@ public class TodayChecklistResponse {
         private Long checklistId;
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private String label;
-        @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "케어카드가 없어 일정·날씨 기반으로 생성된 항목이면 null")
         private String sourceLabel;
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         private boolean completed;

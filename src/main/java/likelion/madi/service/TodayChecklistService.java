@@ -20,7 +20,9 @@ import likelion.madi.repository.CareCardRepository;
 import likelion.madi.repository.CareChecklistRepository;
 import likelion.madi.repository.CareRecordRepository;
 import likelion.madi.repository.RecoveryGuideRepository;
+import likelion.madi.repository.ScheduleRepository;
 import likelion.madi.repository.UserRepository;
+import likelion.madi.domain.Schedule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -88,12 +90,35 @@ public class TodayChecklistService {
         }
         """;
 
+    // 진행 중인 케어카드가 없을 때(온보딩 직후 등) 오늘 일정/날씨만으로 생성하는 일반 컨디션 관리 체크리스트용 프롬프트
+    private static final String NO_CARD_SYSTEM_PROMPT = """
+        당신은 사용자의 오늘 일정과 날씨를 참고해 하루 컨디션 관리 체크리스트를 작성하는 어시스턴트입니다.
+        진행 중인 시술 회복 카드가 아직 없는 사용자에게, 오늘 실천할 수 있는 행동 3가지를
+        앱 체크박스 옆에 붙는 "체크리스트 항목"으로 작성하세요.
+
+        체크리스트 항목 형식 규칙 (반드시 지키세요):
+        - "명사구 + ~하기"로 끝나는 짧은 지시어 형태로만 작성하세요.
+          (좋은 예: "외출 전 선크림 바르기", "물 충분히 마시기", "미세먼지 심하면 마스크 착용하기")
+        - "~해주세요", "~합니다", "~거예요" 같은 설명체·존댓말 문장은 절대 쓰지 마세요.
+        - 한 항목당 25자를 넘기지 마세요.
+        - "~하지 않기", "~자제하기", "~피하기" 같은 금지형 표현은 쓰지 말고, 실제로 할 수 있는 행동으로 표현하세요.
+        - 의학적 진단, 처방은 하지 마세요.
+        - 날씨(자외선, 미세먼지, 기온)와 오늘 일정이 있다면 그 내용을 반영해서 구체적으로 작성하세요.
+        - 일정이나 날씨 정보가 없다면 일반적인 피부/컨디션 관리 상식 수준에서 작성하세요.
+
+        반드시 아래 JSON 형식으로만 응답하세요. 마크다운이나 설명 없이 순수 JSON만 출력하세요.
+        {
+          "items": ["행동 문구 1", "행동 문구 2", "행동 문구 3"]
+        }
+        """;
+
     private final UserRepository userRepository;
     private final CareCardRepository careCardRepository;
     private final CareChecklistRepository careChecklistRepository;
     private final CareRecordRepository careRecordRepository;
     private final AiFeedbackRepository aiFeedbackRepository;
     private final RecoveryGuideRepository recoveryGuideRepository;
+    private final ScheduleRepository scheduleRepository;
     private final WeatherService weatherService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -107,6 +132,18 @@ public class TodayChecklistService {
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
 
         List<CareCard> careCards = careCardRepository.findByUser(user);
+
+        // 진행 중인 케어카드가 없으면(온보딩 직후 등) 일정+날씨 기반 체크리스트로 대체. 카드가 생기는 순간
+        // 이 분기를 타지 않게 되므로 응답은 즉시 카드 기반 체크리스트로 교체된다.
+        if (careCards.isEmpty()) {
+            List<TodayChecklistResponse.Item> noCardItems = buildItemsForNoCard(user, date);
+            long noCardCompleted = noCardItems.stream().filter(TodayChecklistResponse.Item::isCompleted).count();
+            return TodayChecklistResponse.builder()
+                    .completedCount((int) noCardCompleted)
+                    .totalCount(noCardItems.size())
+                    .items(noCardItems)
+                    .build();
+        }
 
         // 체크리스트 항목은 카드별로 날짜마다 생성/유지되어야 하므로, 노출 여부와 무관하게 모든 카드에 대해 만들어둔다.
         Map<CareCard, List<TodayChecklistResponse.Item>> itemsByCard = new LinkedHashMap<>();
@@ -161,8 +198,8 @@ public class TodayChecklistService {
         CareChecklist checklist = careChecklistRepository.findById(checklistId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_CHECKLIST));
 
-        CareCard careCard = checklist.getCareCard();
-        if (!careCard.getUser().getUserId().equals(userId)) {
+        User owner = checklist.resolveOwner();
+        if (owner == null || !owner.getUserId().equals(userId)) {
             throw new ForbiddenException(ErrorStatus.FORBIDDEN_RESOURCE_ACCESS);
         }
 
@@ -172,7 +209,8 @@ public class TodayChecklistService {
             checklist.uncheck();
         }
 
-        String sourceLabel = resolveSourceLabel(careCard, checklist.getCheckDate());
+        CareCard careCard = checklist.getCareCard();
+        String sourceLabel = careCard != null ? resolveSourceLabel(careCard, checklist.getCheckDate()) : null;
 
         return TodayChecklistResponse.Item.builder()
                 .checklistId(checklist.getChecklistId())
@@ -249,6 +287,90 @@ public class TodayChecklistService {
         return items;
     }
 
+    // 진행 중인 케어카드가 없을 때: 오늘 일정 + 날씨만으로 일반 컨디션 관리 체크리스트를 생성
+    private List<TodayChecklistResponse.Item> buildItemsForNoCard(User user, LocalDate today) {
+        // 그날 이미 생성된 항목이 있으면 재사용 (하루 한 번만 AI 호출, 체크 상태 유지)
+        List<CareChecklist> existing = careChecklistRepository.findByUserAndCareCardIsNullAndCheckDate(user, today)
+                .stream()
+                .sorted(Comparator.comparing(CareChecklist::getChecklistId))
+                .toList();
+        if (!existing.isEmpty()) {
+            return existing.stream()
+                    .map(c -> TodayChecklistResponse.Item.builder()
+                            .checklistId(c.getChecklistId())
+                            .label(c.getLabel())
+                            .sourceLabel(null)
+                            .completed(Boolean.TRUE.equals(c.getIsChecked()))
+                            .build())
+                    .toList();
+        }
+
+        List<String> labels = generateNoCardLabels(user, today);
+        if (labels.isEmpty()) {
+            return List.of();
+        }
+
+        List<TodayChecklistResponse.Item> items = new ArrayList<>();
+        for (String label : labels) {
+            CareChecklist checklist = careChecklistRepository.save(CareChecklist.builder()
+                    .user(user)
+                    .checkDate(today)
+                    .label(label)
+                    .build());
+
+            items.add(TodayChecklistResponse.Item.builder()
+                    .checklistId(checklist.getChecklistId())
+                    .label(checklist.getLabel())
+                    .sourceLabel(null)
+                    .completed(false)
+                    .build());
+        }
+        return items;
+    }
+
+    // 오늘 일정 + 날씨를 반영해 AI로 일반 컨디션 관리 체크리스트 문구를 생성. 실패 시 빈 목록 반환.
+    private List<String> generateNoCardLabels(User user, LocalDate today) {
+        try {
+            String prompt = buildNoCardPrompt(user, today);
+            return callOpenAiForChecklist(NO_CARD_SYSTEM_PROMPT, prompt);
+        } catch (Exception e) {
+            log.error("카드 없음 체크리스트 AI 생성 실패. userId={}", user.getUserId(), e);
+            return List.of();
+        }
+    }
+
+    private String buildNoCardPrompt(User user, LocalDate today) {
+        StringBuilder sb = new StringBuilder();
+
+        List<Schedule> schedules = scheduleRepository.findByUserAndEventDate(user, today);
+        if (schedules.isEmpty()) {
+            sb.append("오늘 일정: 없음\n\n");
+        } else {
+            sb.append("오늘 일정:\n");
+            for (Schedule schedule : schedules) {
+                sb.append("- ").append(schedule.getTitle());
+                if (schedule.getEventTime() != null) {
+                    sb.append(" (").append(schedule.getEventTime()).append(")");
+                }
+                sb.append("\n");
+            }
+            sb.append("\n");
+        }
+
+        try {
+            WeatherResponseDto weather = weatherService.getWeatherAndEnvironment(today, user.getCity(), user.getDistrict());
+            sb.append("오늘 날씨: ").append(weather.getWeatherCondition())
+                    .append(", 기온 ").append(weather.getTemperature()).append("도")
+                    .append(", 자외선지수 ").append(weather.getUvIndex())
+                    .append(", 미세먼지 ").append(weather.getPm10Status()).append("\n\n");
+        } catch (Exception e) {
+            log.warn("카드 없음 체크리스트 생성 중 날씨 조회 실패, 날씨 정보 없이 진행합니다.", e);
+        }
+
+        sb.append("위 정보를 참고해서 오늘 실천할 컨디션 관리 행동 3가지를 지정된 JSON 형식으로만 응답하세요.");
+        return sb.toString();
+    }
+
     // 시술 기준 + 회복 기록 + 날씨를 반영해 AI로 오늘의 체크리스트 문구를 생성. 실패 시 기본 가이드 문장으로 대체.
     private List<String> generateTodayCareLabels(CareCard careCard, CareCardTreatment primary, Treatment treatment,
                                                  int dDay, LocalDate today, User user) {
@@ -260,7 +382,7 @@ public class TodayChecklistService {
 
         try {
             String prompt = buildPrompt(primary, treatment, dDay, baseGuide, careCard, today, user);
-            List<String> generated = callOpenAiForChecklist(prompt);
+            List<String> generated = callOpenAiForChecklist(SYSTEM_PROMPT, prompt);
             if (!generated.isEmpty()) {
                 return generated;
             }
@@ -340,7 +462,7 @@ public class TodayChecklistService {
         return sb.toString();
     }
 
-    private List<String> callOpenAiForChecklist(String userPrompt) {
+    private List<String> callOpenAiForChecklist(String systemPrompt, String userPrompt) {
         RestTemplate restTemplate = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
@@ -352,7 +474,7 @@ public class TodayChecklistService {
                 "max_tokens", 300,
                 "response_format", Map.of("type", "json_object"),
                 "messages", List.of(
-                        Map.of("role", "system", "content", SYSTEM_PROMPT),
+                        Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)
                 )
         );

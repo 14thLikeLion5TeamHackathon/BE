@@ -26,6 +26,7 @@ public class OnboardingRequest {
     @NotNull @AssertTrue
     private Boolean agreeHealthData;
     private Boolean agreeCalendarData;
+    private Boolean agreeKakaoNotification;
     @NotNull
     private Boolean hasAacOfflineExperience;
 

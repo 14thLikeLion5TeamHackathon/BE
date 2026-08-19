@@ -33,6 +33,10 @@ public class CareChecklist {
     @JoinColumn(name = "card_id")
     private CareCard careCard;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @Column(name = "check_date")
     private LocalDate checkDate;
 
@@ -46,11 +50,17 @@ public class CareChecklist {
     private LocalDateTime checkedAt;
 
     @Builder
-    public CareChecklist(CareCard careCard, LocalDate checkDate, String label) {
+    public CareChecklist(CareCard careCard, User user, LocalDate checkDate, String label) {
         this.careCard = careCard;
+        this.user = user;
         this.checkDate = checkDate;
         this.label = label;
         this.isChecked = false;
+    }
+
+    // 카드 유무와 무관하게 실제 소유자를 반환 (카드가 있으면 카드의 유저, 없으면 직접 연결된 유저)
+    public User resolveOwner() {
+        return careCard != null ? careCard.getUser() : user;
     }
 
     public void check() {
