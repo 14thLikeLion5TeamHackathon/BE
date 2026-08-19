@@ -75,7 +75,7 @@ public class BriefingService {
     // 같이 날아가지 않도록 별도 트랜잭션으로 분리
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BriefingResponse getBriefing(User user, LocalDate date, String city, String district) {
-        WeatherResponseDto weather = weatherService.getWeatherAndEnvironment(date, city, district);
+        WeatherResponseDto weather = weatherService.getWeather(user.getLatitude(), user.getLongitude(), city, district, date);
 
         boolean calendarConnected = calendarConnectionRepository.findByUser(user)
                 .map(conn -> conn.getStatus() == ConnectionStatus.CONNECTED)
