@@ -1,5 +1,6 @@
 package likelion.madi.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import likelion.madi.domain.CareCard;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,8 +13,11 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CareCardCreateResponse {
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private Long cardId;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate treatmentDate;
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDateTime createdAt;
 
     @Builder
