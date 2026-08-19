@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import likelion.madi.common.exception.BaseException;
 import likelion.madi.common.response.ApiResponse;
 import likelion.madi.common.response.ErrorStatus;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Hidden
 @RestControllerAdvice
@@ -133,5 +134,14 @@ public class GlobalExceptionAdvice {
 
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
                 .body(ApiResponse.fail(ErrorStatus.UNSUPPORTED_MEDIA_TYPE.getStatusCode(), errorMsg));
+    }
+
+    // 존재하지 않는 정적 리소스 요청 (ex. 삭제되거나 없는 /uploads/*.png)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse> handleNoResourceFoundException(NoResourceFoundException ex) {
+        log.warn("존재하지 않는 정적 리소스 요청 - {}", ex.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND.value())
+                .body(ApiResponse.fail(ErrorStatus.NOT_FOUND_RESOURCE.getStatusCode(),
+                        ErrorStatus.NOT_FOUND_RESOURCE.getMessage()));
     }
 }
