@@ -29,6 +29,7 @@ services:
       # 환경변수 이름은 항상 언더스코어만 사용 - 하이픈 X).
       SPRING_APPLICATION_NAME: madi
       SPRING_AUTOCONFIGURE_EXCLUDE: io.awspring.cloud.autoconfigure.s3.S3AutoConfiguration
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
       SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 15MB
       SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 15MB
 
