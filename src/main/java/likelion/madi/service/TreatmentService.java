@@ -1,9 +1,12 @@
 package likelion.madi.service;
 
+import likelion.madi.common.response.PageResponse;
 import likelion.madi.dto.response.TreatmentResponse;
 import likelion.madi.repository.TreatmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +21,10 @@ public class TreatmentService {
 
     // 시술명 검색 API (키워드+카테고리 필터 통합)
     @Transactional(readOnly = true)
-    public List<TreatmentResponse> search(String keyword, String category) {
-        return treatmentRepository.search(keyword, category)
-                .stream()
-                .map(TreatmentResponse::from)
-                .toList();
+    public PageResponse<TreatmentResponse> search(String keyword, String category, int page, int size) {
+        Page<TreatmentResponse> result = treatmentRepository
+                .search(keyword, category, PageRequest.of(page, size))
+                .map(TreatmentResponse::from);
+        return PageResponse.from(result);
     }
 }
