@@ -68,6 +68,17 @@ public class NotificationService {
         return KakaoNotificationResponse.from(notification);
     }
 
+
+    @Transactional(readOnly = true)
+    public KakaoNotificationResponse getKakaoNotificationStatus(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        return kakaoNotificationRepository.findByUser(user)
+                .map(KakaoNotificationResponse::from)
+                .orElseGet(KakaoNotificationResponse::notConnected);
+    }
+
     @Transactional
     public KakaoNotificationResponse updateConsent(Long userId, KakaoNotificationRequest request) {
         User user = userRepository.findById(userId)

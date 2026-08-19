@@ -12,11 +12,7 @@ import likelion.madi.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -37,6 +33,21 @@ public class NotificationController {
                 ApiResponse.success(
                         SuccessStatus.KAKAO_NOTIFICATION_CONNECT_SUCCESS.getStatusCode(),
                         SuccessStatus.KAKAO_NOTIFICATION_CONNECT_SUCCESS.getMessage(),
+                        result
+                )
+        );
+    }
+
+    @Operation(summary = "카카오 알림 연동 상태 조회")
+    @GetMapping("/kakao")
+    public ResponseEntity<ApiResponse<KakaoNotificationResponse>> getKakaoNotificationStatus(
+            @AuthenticationPrincipal Long userId
+    ) {
+        KakaoNotificationResponse result = notificationService.getKakaoNotificationStatus(userId);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        SuccessStatus.KAKAO_NOTIFICATION_GET_SUCCESS.getStatusCode(),
+                        SuccessStatus.KAKAO_NOTIFICATION_GET_SUCCESS.getMessage(),
                         result
                 )
         );

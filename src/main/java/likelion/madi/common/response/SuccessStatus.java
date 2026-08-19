@@ -58,7 +58,7 @@ public enum SuccessStatus {
     KAKAO_NOTIFICATION_DISCONNECT_SUCCESS(HttpStatus.NO_CONTENT, "카카오 알림 연동 해제 성공"),
     SOCIAL_UNLINK_SUCCESS(HttpStatus.NO_CONTENT, "소셜 로그인 연동 해제 성공"),
     MEMBER_WITHDRAW_SUCCESS(HttpStatus.NO_CONTENT, "회원탈퇴 성공"),
-
+    KAKAO_NOTIFICATION_GET_SUCCESS(HttpStatus.OK, "카카오 알림 연동 상태 조회 성공"),
     ;
 
     private final HttpStatus httpStatus;

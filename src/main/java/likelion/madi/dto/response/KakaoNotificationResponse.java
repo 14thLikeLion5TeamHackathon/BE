@@ -13,13 +13,21 @@ public class KakaoNotificationResponse {
     private Long userId;
     private Boolean consent;
     private LocalDateTime consentedAt;
+    private Boolean connected;
 
     public static KakaoNotificationResponse from(KakaoNotification notification) {
         return KakaoNotificationResponse.builder()
                 .notificationId(notification.getNotificationId())
-                    .userId(notification.getUser().getUserId())
-                    .consent(notification.getConsent())
+                .userId(notification.getUser().getUserId())
+                .consent(notification.getConsent())
                 .consentedAt(notification.getConsentedAt())
-                    .build();
+                .connected(true)
+                .build();
     }
+    public static KakaoNotificationResponse notConnected() {
+        return KakaoNotificationResponse.builder()
+                .connected(false)
+                .build();
+    }
+
 }
