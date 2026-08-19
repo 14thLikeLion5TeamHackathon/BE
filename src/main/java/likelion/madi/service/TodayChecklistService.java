@@ -137,7 +137,10 @@ public class TodayChecklistService {
     public TodayChecklistResponse getTodayChecklist(Long userId, LocalDate date) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+        return buildTodayChecklistResponse(user, date);
+    }
 
+    private TodayChecklistResponse buildTodayChecklistResponse(User user, LocalDate date) {
         List<CareCard> careCards = careCardRepository.findByUser(user);
 
         // 진행 중인 케어카드가 없으면(온보딩 직후 등) 일정+날씨 기반 체크리스트로 대체. 카드가 생기는 순간
@@ -180,7 +183,6 @@ public class TodayChecklistService {
                 .items(visibleItems)
                 .build();
     }
-
     // 케어카드의 현재 상태 긴급도 점수: AI가 병원 문의를 권고했으면 최우선, 아니면 최근 기록의 증상 강도(0~3) 중 최댓값, 기록이 없으면 0
     private int computeUrgencyScore(CareCard careCard) {
         return careRecordRepository.findTopByCareCardOrderByRecordedAtDesc(careCard)
@@ -519,5 +521,19 @@ public class TodayChecklistService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public TodayChecklistResponse refreshTodayChecklist(Long userId, LocalDate date) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
+
+        List<CareCard> careCards = careCardRepository.findByUser(user);
+        if (!careCards.isEmpty()) {
+            careChecklistRepository.deleteByCareCardInAndCheckDate(careCards, date);
+        }
+        careChecklistRepository.deleteByUserAndCareCardIsNullAndCheckDate(user, date);
+
+        return buildTodayChecklistResponse(user, date);  // 기존 getTodayChecklist 본문을 이 메서드로 빼서 공유
     }
 }
