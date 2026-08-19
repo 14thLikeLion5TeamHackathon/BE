@@ -35,15 +35,30 @@ public class WeatherService {
     // 🌟 OpenWeatherMap 5일 예보 지원 범위 (오늘 포함 최대 5일: 0, 1, 2, 3, 4일 뒤)
     private static final int MAX_FORECAST_DAYS = 5;
 
+    // 🛡️ 1차 방어선 허용 범위 (예: 과거 30일 ~ 미래 7일)
+    private static final int EXTREME_PAST_DAYS = -30;
+    private static final int EXTREME_FUTURE_DAYS = 7;
 
     @Value("${openweathermap.api.key}")
-
-
     private String apiKey;
 
     /**
-     * 예보 제공 날짜 유효성 검증 메서드
-     * - 오늘보다 과거 날짜이거나, 제공 가능한 범위를 벗어난 미래 날짜인 경우 400 Bad Request
+     * 🛡️ 1차 방어선 (Fast-Fail): DB 조회 전 실행
+     * 너무 먼 과거(30일 초과)나 미래(7일 초과)의 요청은 DB도 보지 않고 즉시 차단
+     */
+    private void validateExtremeDateRange(LocalDate date) {
+        LocalDate today = KstDate.today();
+        long daysDiff = ChronoUnit.DAYS.between(today, date);
+
+        if (daysDiff < EXTREME_PAST_DAYS || daysDiff > EXTREME_FUTURE_DAYS) {
+            log.warn("비정상적인 날짜 요청 (DB 조회 차단): requestedDate={}, today={}, daysDiff={}", date, today, daysDiff);
+            throw new BadRequestException("조회할 수 있는 날짜 범위를 크게 벗어났습니다. (최대 과거 30일 ~ 미래 7일 지원)");
+        }
+    }
+
+    /**
+     * 🛡️ 2차 방어선: DB에 데이터가 없을 때, API 호출 전 실행
+     * 오픈웨더맵이 제공 불가능한 과거이거나 5일 밖의 미래라면 에러 발생
      */
     private void validateForecastRange(LocalDate date) {
         LocalDate today = KstDate.today();
@@ -51,41 +66,29 @@ public class WeatherService {
 
         if (daysDiff < 0 || daysDiff >= MAX_FORECAST_DAYS) {
             log.warn("예보 범위를 벗어난 날짜 요청: requestedDate={}, today={}, daysDiff={}", date, today, daysDiff);
-            throw new BadRequestException("예보 제공 범위를 벗어난 날짜입니다.");
+            throw new BadRequestException("요청하신 날짜의 데이터가 DB에 존재하지 않으며, 오픈웨더맵 예보 지원 범위를 벗어나 새 데이터를 가져올 수 없습니다.");
         }
     }
 
-    /**
-     * 좌표를 소수점 2자리로 보정하는 메서드 (약 1.1km 격자 단위)
-     * 예: 37.5665 -> 37.57 / 126.9780 -> 126.98
-     */
     private double roundToTwoDecimals(double value) {
         return Math.round(value * 100.0) / 100.0;
     }
 
-    /**
-     * 🌟 날씨 상태(맑음, 구름, 비 등)에 따라 현실적인 자외선 등급을 가중치 기반으로 산출
-     */
     private String calculateUvIndex(String weatherCondition) {
         if (weatherCondition == null || weatherCondition.isBlank()) {
             return "보통";
         }
 
         String condition = weatherCondition.toLowerCase();
-        int randomChance = random.nextInt(100); // 0 ~ 99 난수
+        int randomChance = random.nextInt(100);
 
-        // 1. 비 / 눈 / 소나기 / 안개 -> 90% "낮음", 10% "보통"
         if (condition.contains("비") || condition.contains("눈") || condition.contains("소나기")
                 || condition.contains("rain") || condition.contains("snow") || condition.contains("mist") || condition.contains("drizzle")) {
             return (randomChance < 90) ? "낮음" : "보통";
         }
-
-        // 2. 구름 / 흐림 -> 70% "보통", 30% "낮음"
         if (condition.contains("구름") || condition.contains("흐림") || condition.contains("cloud") || condition.contains("overcast")) {
             return (randomChance < 70) ? "보통" : "낮음";
         }
-
-        // 3. 맑음 -> 여름철 기준 70% "높음", 30% "매우 높음"
         if (condition.contains("맑음") || condition.contains("clear")) {
             return (randomChance < 70) ? "높음" : "매우 높음";
         }
@@ -97,30 +100,32 @@ public class WeatherService {
     public WeatherResponseDto getWeather(Double lat, Double lon, String city, String district, LocalDate targetDate) {
         LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
-        // 🌟 1. 날짜 유효성 검증
-        validateForecastRange(date);
+        // 🛡️ [1차 방어선] 터무니없는 날짜 요청은 입구에서 컷 (DB 보호)
+        validateExtremeDateRange(date);
 
-        // 🌟 2. 위경도(GPS) 좌표가 직접 들어온 경우 -> 소수점 2자리로 보정하여 DB 캐싱 처리
         if (lat != null && lon != null && Math.abs(lat) <= 90.0 && Math.abs(lon) <= 180.0) {
             double roundedLat = roundToTwoDecimals(lat);
             double roundedLon = roundToTwoDecimals(lon);
 
-            // 2-1. 소수점 2자리 격자 캐시가 DB에 있는지 먼저 확인 (Cache Hit -> 외부 API 호출 방지)
+            // [DB 조회] 허용된 범위 내라면 일단 DB부터 확인
             List<Weather> cachedGpsWeather = weatherRepository.findByTargetDateAndLatitudeAndLongitude(date, roundedLat, roundedLon);
             if (!cachedGpsWeather.isEmpty()) {
                 return new WeatherResponseDto(cachedGpsWeather.get(0));
             }
 
-            // 2-2. DB에 없으면 외부 API 호출 후 소수점 2자리 좌표로 DB 저장 (Cache Miss)
+            // 🛡️ [2차 방어선] DB에 없으니 API를 불러야 하는데, API 허용 범위인지 검사
+            validateForecastRange(date);
+
             return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, "GPS_USER", "lat_" + roundedLat + "_lon_" + roundedLon, roundedLat, roundedLon, true);
         }
 
-        // 📍 3. 지역명(city, district)이 제공된 경우
         if (city != null && district != null) {
             List<Weather> cachedWeatherList = weatherRepository.findByTargetDateAndCityAndDistrict(date, city, district);
             if (!cachedWeatherList.isEmpty()) {
                 return new WeatherResponseDto(cachedWeatherList.get(0));
             }
+
+            validateForecastRange(date);
 
             RegionMapper.Coordinate coord = RegionMapper.getCoordinate(city, district);
             double roundedLat = roundToTwoDecimals(coord.getLat());
@@ -129,7 +134,6 @@ public class WeatherService {
             return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, city, district, roundedLat, roundedLon, true);
         }
 
-        // 📍 4. 둘 다 없는 경우 기본값 (서울 중구) 처리
         city = "서울특별시";
         district = "중구";
         RegionMapper.Coordinate defaultCoord = RegionMapper.getCoordinate(city, district);
@@ -141,6 +145,8 @@ public class WeatherService {
             return new WeatherResponseDto(cachedDefaultList.get(0));
         }
 
+        validateForecastRange(date);
+
         return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, city, district, roundedLat, roundedLon, true);
     }
 
@@ -148,7 +154,8 @@ public class WeatherService {
     public WeatherResponseDto getWeatherAndEnvironment(LocalDate targetDate, String city, String district) {
         LocalDate date = (targetDate != null) ? targetDate : KstDate.today();
 
-        validateForecastRange(date);
+        // 🛡️ 1차 방어선
+        validateExtremeDateRange(date);
 
         String targetCity = (city != null) ? city : "서울특별시";
         String targetDistrict = (district != null) ? district : "중구";
@@ -158,17 +165,19 @@ public class WeatherService {
             return new WeatherResponseDto(cachedWeatherList.get(0));
         }
 
+        // 🛡️ 2차 방어선
+        validateForecastRange(date);
+
         RegionMapper.Coordinate coord = RegionMapper.getCoordinate(targetCity, targetDistrict);
         double roundedLat = roundToTwoDecimals(coord.getLat());
         double roundedLon = roundToTwoDecimals(coord.getLon());
 
-        return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, targetCity, targetDistrict,
-                roundedLat, roundedLon, true);
+        return callOpenWeatherMapForecastApi(roundedLat, roundedLon, date, targetCity, targetDistrict, roundedLat, roundedLon, true);
     }
 
     private WeatherResponseDto callOpenWeatherMapForecastApi(double lat, double lon, LocalDate targetDate,
                                                              String city, String district, Double latToSave, Double lonToSave, boolean shouldSaveDb) {
-
+        // ... 기존 callOpenWeatherMapForecastApi 내부 로직 동일 (생략 없이 그대로 유지) ...
         URI uri = UriComponentsBuilder.fromUriString("https://api.openweathermap.org")
                 .path("/data/2.5/forecast")
                 .queryParam("lat", lat)
@@ -200,7 +209,6 @@ public class WeatherService {
             if (rootNode.has("list") && rootNode.get("list").isArray()) {
                 JsonNode listNode = rootNode.get("list");
                 JsonNode targetForecastNode = listNode.get(0);
-
                 String targetDateStr = targetDate.toString();
 
                 for (JsonNode node : listNode) {
@@ -228,11 +236,8 @@ public class WeatherService {
 
         String finalTemp = (tempVal != null) ? String.valueOf(tempVal) : "25.0";
         String finalCondition = (weatherCondition != null && !weatherCondition.isEmpty()) ? weatherCondition : "맑음";
-
-        // 🌟 [수정 완료] 날씨 상태(finalCondition)에 맞춰 자외선 등급 자동 산출
         String finalUvIndex = calculateUvIndex(finalCondition);
 
-        // 8월 여름철 미세먼지 랜덤 범위(15~45)
         int finalPm10Value = (int) (Math.random() * 31) + 15;
         String finalPm10Status = (finalPm10Value <= 30) ? "좋음" : "보통";
 
@@ -241,8 +246,8 @@ public class WeatherService {
                     .targetDate(targetDate)
                     .city(city != null ? city : "GPS_USER")
                     .district(district != null ? district : "UNKNOWN")
-                    .latitude(latToSave)   // 🌟 Double 소수점 2자리 저장
-                    .longitude(lonToSave) // 🌟 Double 소수점 2자리 저장
+                    .latitude(latToSave)
+                    .longitude(lonToSave)
                     .temperature(finalTemp)
                     .weatherCondition(finalCondition)
                     .pm10Status(finalPm10Status)
