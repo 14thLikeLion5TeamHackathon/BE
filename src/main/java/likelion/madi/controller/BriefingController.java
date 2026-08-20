@@ -35,11 +35,12 @@ public class BriefingController {
     public ResponseEntity<ApiResponse<BriefingResponse>> getBriefing(
             @AuthenticationPrincipal Long userId,
             @RequestParam("date")
-            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
+            @RequestParam(value = "refresh", defaultValue = "false") boolean refresh) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.NOT_FOUND_USER));
 
-        BriefingResponse result = briefingService.getBriefing(user, date, user.getCity(), user.getDistrict());
+        BriefingResponse result = briefingService.getBriefing(user, date, user.getCity(), user.getDistrict(), refresh);
 
         return ResponseEntity.ok(
                 ApiResponse.success(

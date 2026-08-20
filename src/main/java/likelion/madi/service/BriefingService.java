@@ -74,7 +74,7 @@ public class BriefingService {
     // 발송/조회 쪽에서 나중에 예외가 나서 그 트랜잭션이 롤백되더라도, 방금 생성한 캐시(특히 OpenAI 호출 결과)까지
     // 같이 날아가지 않도록 별도 트랜잭션으로 분리
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public BriefingResponse getBriefing(User user, LocalDate date, String city, String district) {
+    public BriefingResponse getBriefing(User user, LocalDate date, String city, String district, boolean refresh) {
         WeatherResponseDto weather = weatherService.getWeather(user.getLatitude(), user.getLongitude(), city, district, date);
 
         boolean calendarConnected = calendarConnectionRepository.findByUser(user)
@@ -84,7 +84,8 @@ public class BriefingService {
         // 직접 입력한 일정(MANUAL)은 캘린더 연동 여부랑 상관없이 항상 반영
         List<Schedule> schedules = scheduleRepository.findByUserAndEventDate(user, date);
 
-        List<CareCard> cards = careCardRepository.findByUser(user).stream()
+        List<CareCard> allCards = careCardRepository.findByUser(user);
+        List<CareCard> cards = allCards.stream()
                 .filter(card -> isInProgress(card, date))
                 .toList();
 
@@ -98,11 +99,20 @@ public class BriefingService {
                 .toList();
 
         if (cards.isEmpty()) {
+            BriefingResponse.CardJudgement completedJudgement = allCards.isEmpty()
+                    ? null
+                    : BriefingResponse.CardJudgement.builder()
+                      .cardIds(List.of())
+                      .actionSentence("그동안 고생 많으셨어요! 모든 케어가 완료됐어요. 새로운 시술을 시작하면 다시 관리해드릴게요. ")   // 완료 축하 문구 직접 써보기
+                      .cautionLevel("낮음")
+                      .reasons(List.of())
+                      .build();
+
             return BriefingResponse.builder()
                     .date(date.toString())
                     .schedules(scheduleItems)
-                    .cardJudgement(null)
-                    .overallCautionLevel(null)
+                    .cardJudgement(completedJudgement)
+                    .overallCautionLevel(completedJudgement != null ? completedJudgement.getCautionLevel() : null)
                     .calendarConnected(calendarConnected)
                     .build();
         }
@@ -120,8 +130,8 @@ public class BriefingService {
                 .reduce((a, b) -> a + "," + b)
                 .orElse("");
 
-        BriefingResponse.CardJudgement judgement = briefingCacheRepository
-                .findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAtAndCardIds(user, date, city, district, latestRecordAt, cardIdsKey)
+        BriefingResponse.CardJudgement judgement = (refresh ? Optional.<BriefingCache>empty() : briefingCacheRepository
+                .findByUserAndTargetDateAndCityAndDistrictAndLatestRecordAtAndCardIds(user, date, city, district, latestRecordAt, cardIdsKey))
                 .map(this::toCardJudgement)
                 .orElseGet(() -> {
                     String prompt = buildPrompt(cards, weather, schedules, date);
