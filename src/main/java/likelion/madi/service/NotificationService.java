@@ -19,6 +19,7 @@ import likelion.madi.repository.KakaoNotificationRepository;
 import likelion.madi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,9 @@ public class NotificationService {
     private final TodayChecklistService todayChecklistService;
     private final BriefingService briefingService;
     private final RiskWarningService riskWarningService;
+
+    @Value("${app.frontend.base-url}")
+    private String frontendBaseUrl;
 
     @Transactional
     public KakaoNotificationResponse connectKakaoNotification(Long userId, KakaoNotificationConnectRequest request) {
@@ -112,11 +116,11 @@ public class NotificationService {
         String message = buildMessage(checklist, briefing);
 
         try {
-            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
+            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, frontendBaseUrl, "오늘의 케어 보기");
         } catch (Exception e) {
             KakaoTokenResponse refreshed = kakaoOAuthClient.refreshAccessToken(notification.getRefreshToken());
             notification.updateTokens(refreshed.getAccessToken(), refreshed.getRefreshToken());
-            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, "http://localhost:3000", "오늘의 케어 보기");
+            kakaoMessageClient.sendMessage(notification.getAccessToken(), message, frontendBaseUrl, "오늘의 케어 보기");
         }
     }
 
@@ -138,7 +142,7 @@ public class NotificationService {
                                 : primary.getCustomName();
 
                         String message = treatmentName + " 받은 지 " + dDay + "일차예요! 오늘 상태를 기록해보세요.";
-                        String link = "http://localhost:3000/record/" + card.getCardId();
+                        String link = frontendBaseUrl + "/record/" + card.getCardId();
 
                         try {
                             kakaoMessageClient.sendMessage(notification.getAccessToken(), message, link);
@@ -190,7 +194,7 @@ public class NotificationService {
                         kakaoMessageClient.sendMessage(
                                 notification.getAccessToken(),
                                 warning.get(),
-                                "http://localhost:3000",
+                                frontendBaseUrl,
                                 "일정 확인하기"
                         );
                     } catch (Exception e) {
@@ -199,7 +203,7 @@ public class NotificationService {
                         kakaoMessageClient.sendMessage(
                                 notification.getAccessToken(),
                                 warning.get(),
-                                "http://localhost:3000",
+                                frontendBaseUrl,
                                 "일정 확인하기"
                         );
                     }
