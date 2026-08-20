@@ -29,6 +29,12 @@ public class KakaoMessageScheduler {
         }
     }
 
+    // ⚠️ 테스트용 임시 발송 (오늘 15:50 한 번). 테스트 끝나면 이 메서드 지워주세요.
+    @Scheduled(cron = "0 50 15 * * *", zone = "Asia/Seoul")
+    public void sendTestKakaoMessage() {
+        sendDailyKakaoMessages();
+    }
+
     @Scheduled(cron = "0 0 21 * * *", zone = "Asia/Seoul")
     public void sendDailyRecordReminders() {
         notificationService.sendRecordReminder();
