@@ -115,6 +115,8 @@ public class NotificationService {
 
         String message = buildMessage(checklist, briefing);
 
+        log.error("[DEBUG] frontendBaseUrl 실제 값 = [{}]", frontendBaseUrl);
+
         try {
             kakaoMessageClient.sendMessage(notification.getAccessToken(), message, frontendBaseUrl, "오늘의 케어 보기");
         } catch (Exception e) {
