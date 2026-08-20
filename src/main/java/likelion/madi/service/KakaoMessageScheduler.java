@@ -16,7 +16,7 @@ public class KakaoMessageScheduler {
     private final KakaoNotificationRepository kakaoNotificationRepository;
     private final NotificationService notificationService;
 
-    @Scheduled(cron = "0 0 9,18 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 9,19 * * *", zone = "Asia/Seoul")
     public void sendDailyKakaoMessages() {
         List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
         for (KakaoNotification notification : notifications) {
@@ -27,12 +27,6 @@ public class KakaoMessageScheduler {
                 log.warn("카카오 메시지 발송 실패 - userId: {}, error: {}", userId, e.getMessage());
             }
         }
-    }
-
-    // ⚠️ 테스트용 임시 발송 (오늘 15:50 한 번). 테스트 끝나면 이 메서드 지워주세요.
-    @Scheduled(cron = "0 45 18 * * *", zone = "Asia/Seoul")
-    public void sendTestKakaoMessage() {
-        sendDailyKakaoMessages();
     }
 
     @Scheduled(cron = "0 0 21 * * *", zone = "Asia/Seoul")
