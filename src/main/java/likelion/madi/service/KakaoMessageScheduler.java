@@ -16,7 +16,7 @@ public class KakaoMessageScheduler {
     private final KakaoNotificationRepository kakaoNotificationRepository;
     private final NotificationService notificationService;
 
-    @Scheduled(cron = "0 0 9,12,15 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 9,18 * * *", zone = "Asia/Seoul")
     public void sendDailyKakaoMessages() {
         List<KakaoNotification> notifications = kakaoNotificationRepository.findByConsentTrue();
         for (KakaoNotification notification : notifications) {

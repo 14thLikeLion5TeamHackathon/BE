@@ -63,6 +63,7 @@ services:
 
       APP_OAUTH2_AUTHORIZED_REDIRECT_URIS: ${FRONTEND_REDIRECT_URIS:-http://localhost:3000,http://localhost:5173,http://localhost:5174,https://madi-eta.vercel.app}
       APP_OAUTH2_FAILURE_REDIRECT_PATH: ${FRONTEND_FAILURE_REDIRECT_PATH:-/login}
+      APP_FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://madi-eta.vercel.app}
 
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TOKEN_VALIDITY: 3600000
