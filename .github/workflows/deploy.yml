@@ -34,5 +34,6 @@ jobs:
             set_env KAKAO_CLIENT_ID "${{ secrets.KAKAO_CLIENT_ID }}"
             set_env KAKAO_CLIENT_SECRET "${{ secrets.KAKAO_CLIENT_SECRET }}"
             set_env OPENWEATHER_API_KEY "${{ secrets.OPENWEATHER_API_KEY }}"
+            set_env FRONTEND_BASE_URL "https://madi-eta.vercel.app"
             docker compose up -d --build
             docker image prune -f
