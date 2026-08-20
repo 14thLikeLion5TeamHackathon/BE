@@ -33,6 +33,8 @@ public class MypageService {
     private final BlacklistedTokenRepository blacklistedTokenRepository;
     private final NominatimClient nominatimClient;
     private final CareChecklistRepository careChecklistRepository;
+    private final BriefingCacheRepository briefingCacheRepository;
+    private final ChecklistGenerationContextRepository checklistGenerationContextRepository;
 
     @Transactional(readOnly = true)
     public UserInfoResponse getUserInfo(Long userId) {
@@ -100,6 +102,8 @@ public class MypageService {
         });
 
         careChecklistRepository.deleteByUser(user);
+        briefingCacheRepository.deleteByUser(user);
+        checklistGenerationContextRepository.deleteByUser(user);
 
         userRepository.delete(user);
     }
