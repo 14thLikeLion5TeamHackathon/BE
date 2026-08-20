@@ -107,7 +107,7 @@ public class NotificationService {
         LocalDate today = KstDate.today();
 
         TodayChecklistResponse checklist = todayChecklistService.getTodayChecklist(userId, today);
-        BriefingResponse briefing = briefingService.getBriefing(user, today, user.getCity(), user.getDistrict());
+        BriefingResponse briefing = briefingService.getBriefing(user, today, user.getCity(), user.getDistrict(), false);
 
         if (briefing.getCardJudgement() == null && checklist.getItems().isEmpty()) {
             return;
